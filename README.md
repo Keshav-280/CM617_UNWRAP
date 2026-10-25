@@ -13,7 +13,7 @@ A paired meta-analysis of packaging life cycle assessments under Indian collecti
 |---|---|
 | `report/` | `UNWRAP_report_final.pdf` - the full report |
 | `data/` | `UNWRAP_data_and_results.xlsx` (all extracted data, results and model sheets), `paired_comparisons.csv` (the 46 extracted pairs), `prisma_log.csv` (screening flow) |
-| `video/` | The 5-minute explainer video: `UNWRAP_video.html` (open in Chrome or Edge, press Play), narration script, and the scripts that generate the voice-over and music |
+| `video/` | The explainer video: **`UNWRAP_video.mp4`** (final render, 4:15, with voice-over and music), the interactive source `UNWRAP_video.html`, the narration script, and the scripts that generate the voice-over, music and the mp4 (`make_voiceover.py`, `make_music.py`, `render_video.py`) |
 | `archive/` | Earlier drafts and duplicate exports, kept for reference |
 
 ## Watching the video
