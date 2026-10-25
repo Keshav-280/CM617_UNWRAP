@@ -1,0 +1,9 @@
+stage,n,note
+identified,90,All unique records (scoping log 82 + team search and snowballing 8)
+identified_scoping,82,Itemised scoping search log (18 web and database searches plus UNEP 2020 and ACE 2020 reference lists); raw database hit counts to be replaced with exports
+identified_team,8,Team search and snowballing from Stefanini 2021 Table 1 and trade summaries (De Feo; NAPCOR; SDL thesis; iPoint; Gallego-Schmid; Pasqualino; Saleh; Mata & Costa)
+excluded_ta,38,18 reviews (used for snowballing); 5 out-of-scope alternatives (bio-PET; PLA; tap water); 5 single format or end-of-life only; 4 medical or pharma; 3 transport packaging; 1 not a format comparison; 1 foodservice review; 1 not credible
+assessed,52,Full texts or open summaries assessed
+excluded_ft,8,4 relative results or marketing claims only; 3 no extractable paired GWP; 1 duplicate data
+not_extractable,20,Eligible but paired numbers not openly available: 18 paywalled or not yet obtained (IFEU 2018 and 2020; Kouloumpis 2020; Kositcharoenkul 2024; Brock & Williams 2020 etc.); Ball/Sphera 2020 (bounds only); micro-brewery 2022 (relative only)
+included_reports,24,24 reports = 23 studies (two Elopak reports treated as one study)

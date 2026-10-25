@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UNWRAP Video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#243049; --paper:#fbf5e8; --coral:#ff7f63; --mint:#3fbf98; --sky:#4fb0ee; --lemon:#ffd25a; --lilac:#a58af0; --pink:#ff8fb1; --mute:#6b7894;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#e8e1d0;color:var(--ink);font-family:Nunito,"Segoe UI",system-ui,sans-serif;overflow:hidden}
+#wrap{position:absolute;inset:0;display:flex;flex-direction:column}
+#viewport{flex:1;position:relative;overflow:hidden;background:#d9d1bd}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:var(--paper);overflow:hidden}
+
+/* ---------- scenes & reveals ---------- */
+.scene{position:absolute;inset:0;visibility:hidden;z-index:1;transition:visibility 0s .95s}
+.scene.active{visibility:visible;z-index:2;transition:visibility 0s 0s;animation:var(--rev,revCircle) .95s cubic-bezier(.7,0,.2,1) both}
+.scene .inner{position:absolute;inset:0}
+.scene.active .inner{animation:var(--cam,camIn) 70s linear forwards}
+#s0{--rev:revCircle;--cam:camIn} #s1{--rev:revCircle;--cam:camIn} #s2{--rev:revWipe;--cam:camLeft} #s3{--rev:revCircle;--cam:camIn}
+#s4{--rev:revDown;--cam:camRight} #s5{--rev:revDiag;--cam:camLeft} #s6{--rev:revWipe;--cam:camIn} #s7{--rev:revCircle;--cam:camRight}
+@keyframes camIn{from{transform:scale(1)}to{transform:scale(1.04)}}
+@keyframes camLeft{from{transform:scale(1.02) translateX(0)}to{transform:scale(1.02) translateX(-24px)}}
+@keyframes camRight{from{transform:scale(1.02) translateX(-20px)}to{transform:scale(1.02) translateX(6px)}}
+@keyframes revCircle{from{clip-path:circle(0% at 50% 50%)}to{clip-path:circle(150% at 50% 50%)}}
+@keyframes revWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes revDown{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes revDiag{from{clip-path:polygon(0 0,0 0,-30% 100%,-30% 100%)}to{clip-path:polygon(0 0,130% 0,100% 100%,-30% 100%)}}
+
+/* ---------- backgrounds: flat pastel + organic shapes + paper dot grid ---------- */
+.bg{position:absolute;inset:0;opacity:0;transition:opacity 1.4s;overflow:hidden}
+.bg.in{opacity:1}
+.bg::after{content:"";position:absolute;inset:0;background:radial-gradient(rgba(36,48,73,.11) 1.3px,transparent 1.6px) 0 0/30px 30px}
+.blob{position:absolute;opacity:.9;animation:morph 15s ease-in-out infinite alternate}
+@keyframes morph{0%{border-radius:60% 40% 55% 45%/50% 60% 40% 50%;translate:0 0}100%{border-radius:40% 60% 45% 55%/60% 40% 60% 40%;translate:36px -26px}}
+
+/* ---------- drawing primitives ---------- */
+svg.art{position:absolute;left:0;top:0;width:1280px;height:720px;overflow:visible}
+.dr{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset var(--t,1s) cubic-bezier(.5,0,.3,1)}
+.dr.in{stroke-dashoffset:0}
+.g{opacity:0;transform-box:fill-box;transform-origin:50% 100%;transition:opacity .45s,transform .85s cubic-bezier(.2,1.35,.4,1),scale .6s,fill .5s}
+.g.pop{transform:scale(.15)} .g.up{transform:translateY(70px)} .g.lf{transform:translateX(-120px)} .g.rt{transform:translateX(120px)}
+.g.fall{transform:translateY(-640px)} .g.drop{transform:translateY(-300px) rotate(-12deg)}
+.g.in{opacity:1;transform:none}
+.g.gone{opacity:0;scale:.85}
+.fl path{fill:var(--c,#fff);transform:translate(4px,5px)}
+.ol path,.ol circle,.ol line{fill:none;stroke:#243049;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.bar{stroke:#243049;stroke-width:3.5;stroke-linejoin:round}
+.bub{fill:#fff;stroke:#243049;stroke-width:3.5;stroke-linejoin:round}
+
+/* ---------- text ---------- */
+.tx{position:absolute;opacity:0;transform:translateY(14px);transition:opacity .5s,transform .7s cubic-bezier(.2,1.2,.4,1),translate .5s;color:var(--ink);line-height:1.12}
+.tx.in{opacity:1;transform:none}
+.tx.gone{opacity:0;translate:0 -20px}
+.tx.wr{opacity:1;transform:none;clip-path:inset(-30% 101% -30% -3%);transition:clip-path 1.1s cubic-bezier(.5,0,.2,1)}
+.tx.wr.in{clip-path:inset(-30% -3% -30% -3%)}
+.tx.wr.gone{clip-path:inset(-30% 101% -30% -3%);translate:0 0}
+.hd{font-family:Nunito,"Segoe UI",sans-serif;font-weight:900}
+.hw{font-family:Caveat,"Segoe Print","Bradley Hand","Comic Sans MS",cursive;font-weight:700}
+.c{text-align:center}
+.hl{background:linear-gradient(transparent 58%,rgba(255,210,90,.75) 58%);padding:0 .1em}
+.hlc{background:linear-gradient(transparent 58%,rgba(255,127,99,.5) 58%);padding:0 .1em}
+.hlm{background:linear-gradient(transparent 58%,rgba(63,191,152,.45) 58%);padding:0 .1em}
+.co{color:var(--coral)} .mi{color:var(--mint)} .sk{color:var(--sky)} .li{color:var(--lilac)} .mu{color:var(--mute)}
+
+/* ---------- meaningful motion ---------- */
+@keyframes spin{to{rotate:360deg}}
+@keyframes flick{0%,100%{scale:1 1}25%{scale:.92 1.1}50%{scale:1.06 .94}75%{scale:.95 1.08}}
+.spin{transform-box:fill-box;transform-origin:center;animation:spin 5s linear infinite}
+.flame{transform-box:fill-box;transform-origin:50% 100%;animation:flick .7s ease-in-out infinite}
+.wheel{transform-box:fill-box;transform-origin:center}
+.truck.alt .wheel{animation:spin .55s linear 4}
+.truck{transition:transform 2.3s cubic-bezier(.5,0,.3,1),opacity .45s,scale .6s}
+.g.truck.alt{transform:translateX(408px)}
+@keyframes wob{0%,100%{rotate:-4deg}50%{rotate:4deg}}
+.wobble{transform-box:fill-box;transform-origin:50% 100%;animation:wob 2.4s ease-in-out infinite}
+
+/* tokens (scene 1) */
+.tok circle{fill:#fff;stroke:#243049;stroke-width:3.5;transition:fill .5s}
+.tok .ck,.tok .xx{fill:none;stroke:#243049;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .5s}
+.g.tok.w.alt circle{fill:#7fe0bd} .g.tok.w.alt .ck{stroke-dashoffset:0}
+.g.tok.l.alt circle{fill:#ffd2c6} .g.tok.l.alt .xx{stroke-dashoffset:0}
+.g.tok.l.alt{transform:scale(.86)}
+.g.tok.w.alt{transform:scale(1.12)}
+
+/* papers (scene 4) */
+.pp rect{fill:#fff;stroke:#243049;stroke-width:2;transition:fill .4s}
+.pp path{fill:none;stroke:#243049;stroke-width:1.5}
+.g.pp{transform:translate(var(--sx),-440px) rotate(var(--sr));transition:opacity .4s,transform 1.2s cubic-bezier(.4,.1,.3,1)}
+.g.pp.in{transform:none}
+.g.pp.l.alt{opacity:0;transform:translate(var(--lx),460px) rotate(var(--lr))}
+.g.pp.k.alt{transform:translate(var(--nx),var(--ny))}
+.g.pp.k.alt2{transform:translate(var(--bx),var(--by))}
+.pp.k.alt rect{fill:#7fe0bd}
+
+/* bars */
+.hb{transform-box:fill-box;transform-origin:0 50%;transform:scaleX(0);transition:transform 1s cubic-bezier(.3,.7,.2,1)}
+.hb.neg{transform-origin:100% 50%}
+.hb.in{transform:scaleX(1)}
+.vb{transform-box:fill-box;transform-origin:50% 100%;transform:scaleY(0);transition:transform 1s cubic-bezier(.3,.7,.2,1)}
+.vb.in{transform:scaleY(1)}
+.g.rider{transform:translateX(var(--rx,-200px));transition:opacity .4s,transform 1s cubic-bezier(.3,.7,.2,1)}
+.g.rider.in{transform:none}
+
+/* seesaw */
+.plank{opacity:0;transition:transform 1.4s cubic-bezier(.4,1.7,.5,1),opacity .5s}
+.plank.in{opacity:1}
+.plank.alt{transform:rotate(var(--a1,13deg))}
+.plank.alt2{transform:rotate(var(--a2,5deg))}
+.plank.alt3{transform:rotate(var(--a3,0deg))}
+.plank.alt4{transform:rotate(var(--a4,22deg))}
+
+/* rings */
+.rgt{fill:none;stroke:rgba(36,48,73,.12);stroke-width:14}
+.rg{fill:none;stroke-width:14;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;transform-box:fill-box;transform-origin:center;transform:rotate(-90deg);transition:stroke-dashoffset 1.8s cubic-bezier(.3,.7,.2,1)}
+.rg.in{stroke-dashoffset:var(--off)}
+
+/* pack liquids */
+.liq{transform-box:fill-box;transform-origin:50% 100%;transition:transform 1s ease-in-out}
+.res{opacity:0;transition:opacity .6s .5s}
+.g.pk{transition:opacity .45s,transform 1s cubic-bezier(.4,1.1,.4,1),scale .6s}
+.g.pk.alt .liq{transform:scaleY(.04)}
+.g.pk.alt .res{opacity:1}
+.g.pk.alt{transform:rotate(-58deg)}
+.g.pk.alt.alt2{transform:rotate(0deg)}
+.g.pk.alt3,.g.pk.alt3.alt2{transform:translateY(var(--ty,180px)) scale(.5)}
+.drain.alt .liq{transform:scaleY(.04)}
+.drain.alt .res{opacity:1}
+.g.drain.alt{transform:none}
+
+/* subtitles */
+#subs{position:absolute;left:0;right:0;bottom:34px;text-align:center;padding:0 90px;z-index:50;pointer-events:none}
+#subs span{display:inline-block;background:rgba(255,255,255,.92);color:var(--ink);padding:8px 24px;border-radius:14px;font-size:30px;line-height:1.3;font-weight:800;max-width:1100px;box-shadow:0 4px 18px rgba(36,48,73,.18);border:2px solid var(--ink)}
+#subs.off{display:none}
+#bar{position:absolute;left:0;bottom:0;height:7px;background:var(--coral);width:0;z-index:60}
+#count{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:260px;font-weight:900;background:rgba(251,245,232,.92);color:var(--ink);z-index:100}
+
+/* controls */
+#ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:#f4eddc;border-top:1px solid #d8cfb7;font-size:14px;color:var(--ink)}
+#ctl button,#ctl select{background:#fff;color:var(--ink);border:1.5px solid var(--ink);border-radius:8px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}
+#ctl button:hover{background:#ffe8a8}
+#ctl button.on{background:var(--mint);color:#fff;border-color:var(--ink)}
+#seek{flex:1;min-width:200px}
+.rec #ctl{display:none}
+.rec #viewport{background:#fbf5e8}
+#hint{color:var(--mute);font-size:12px;width:100%}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" id="defs"></svg>
+
+<div id="wrap">
+<div id="viewport"><div id="stage"><div id="subs"><span></span></div><div id="bar"></div><div id="count">3</div></div></div>
+<div id="ctl">
+  <button id="play">▶ Play</button>
+  <input id="seek" type="range" min="0" max="1000" value="0">
+  <span id="time">0:00 / 5:00</span>
+  <span id="astat" style="font-weight:700;color:#6b7894">loading audio…</span>
+  <span id="scenebtns"></span>
+  <button id="subbtn" class="on">Subtitles</button>
+  <button id="fs">Fullscreen</button>
+  <button id="rec">● Record mode</button>
+  <button id="exp" title="Records this tab (video + voice + music) to a .webm file">⬇ Export video</button>
+  <div id="hint">Space = play/pause · ← → = previous/next scene · S = subtitles · F = fullscreen · R = record mode (3-2-1 countdown, controls hidden, Esc to exit) · Export video: open in Chrome/Edge, go full screen (F11), click Export video, choose “This tab”</div>
+</div>
+</div>
+
+<script src="voiceover.js"></script>
+<script src="music.js"></script>
+<script>
+/* ================= ICON LIBRARY (flat colour offset behind an ink outline) ================= */
+const BODY={
+ plastic:'M40 18h20v10c0 8 20 12 20 36v78c0 10-8 14-18 14H38c-10 0-18-4-18-14V64c0-24 20-28 20-36z',
+ glass:'M43 14h14v36c0 14 25 20 25 46v42c0 10-8 14-18 14H36c-10 0-18-4-18-14V96c0-26 25-32 25-46z',
+ can:'M28 26h44v116c0 6-4 10-10 10H38c-6 0-10-4-10-10z',
+ carton:'M22 60L50 30l28 30v82c0 5-3 8-8 8H30c-5 0-8-3-8-8z',
+ pouch:'M26 50h48l8 90c0 6-4 10-10 10H28c-6 0-10-4-10-10z',
+ sachet:'M24 44h52v96H24z',
+ pump:'M24 74c0-8 6-12 12-12h28c6 0 12 4 12 12v64c0 8-6 12-12 12H36c-6 0-12-4-12-12z',
+ canister:'M20 66c0-10 6-16 16-16h30c10 0 16 6 16 16v76c0 8-6 12-14 12H34c-8 0-14-4-14-12z'
+};
+const DET={
+ plastic:['M38 6h24v12H38z','M22 92q14 8 28 0t28 0','M22 116q14 8 28 0t28 0'],
+ glass:['M41 4h18v10H41z'],
+ can:['M28 26q22 9 44 0','M44 18h12','M28 70h44','M28 108h44'],
+ carton:['M43 30V14h14v16','M22 60h56','M50 30v30'],
+ pouch:['M42 50V32h16v18','M38 22h24v10H38z','M26 66h48'],
+ sachet:['M24 56h52','M24 128h52'],
+ pump:['M42 46h16v16H42z','M30 22h40v10H58v14H42V32H30z'],
+ canister:['M36 32h26v18H36z','M82 70h6c8 0 10 6 10 12v30c0 6-2 12-10 12h-6']
+};
+const EXTRA={ glass:'<rect x="26" y="102" width="48" height="32" fill="#fff" opacity=".9"/>' };
+function sym(id,vb,fill,out,extra){return `<symbol id="${id}" viewBox="${vb}" overflow="visible"><g class="fl">${fill.map(d=>`<path d="${d}"/>`).join('')}</g>${extra||''}<g class="ol">${out.map(d=>`<path d="${d}"/>`).join('')}</g></symbol>`}
+let DEFS='';
+for(const k in BODY){
+  DEFS+=sym('pk-'+k,'0 0 100 160',[BODY[k]],[BODY[k],...DET[k]],EXTRA[k]);
+  DEFS+=`<clipPath id="cp-${k}"><path d="${BODY[k]}"/></clipPath>`;
+}
+DEFS+=sym('doc','0 0 80 100',['M8 6h46l18 18v70H8z'],['M8 6h46l18 18v70H8z','M54 6v18h18','M20 46h40','M20 60h40','M20 74h24']);
+DEFS+=sym('bin','0 0 80 100',['M14 28h52l-5 66H19z'],['M14 28h52l-5 66H19z','M8 22h64','M30 22v-8h20v8','M32 40v40','M48 40v40']);
+DEFS+=sym('pile','0 0 110 80',['M4 74c2-20 16-26 26-22 4-18 22-24 34-14 14-6 30 4 28 20 10 2 14 10 14 16z'],['M4 74c2-20 16-26 26-22 4-18 22-24 34-14 14-6 30 4 28 20 10 2 14 10 14 16z','M30 52c4 4 8 4 12 0','M64 38c4 5 10 5 14 0','M20 66h14','M70 64h18']);
+DEFS+=sym('flame','0 0 60 80',['M30 4C34 22 52 30 52 52C52 68 42 76 30 76C18 76 8 68 8 52C8 40 16 34 20 24C22 32 26 34 28 34C28 24 28 14 30 4z'],['M30 4C34 22 52 30 52 52C52 68 42 76 30 76C18 76 8 68 8 52C8 40 16 34 20 24C22 32 26 34 28 34C28 24 28 14 30 4z'],'<path d="M30 42c8 8 12 14 12 22c0 8-6 10-12 10s-12-2-12-10c0-8 8-12 12-22z" fill="#ffe27a"/>');
+DEFS+=sym('magnifier','0 0 100 100',['M16 40a24 24 0 1 0 48 0a24 24 0 1 0 -48 0'],['M16 40a24 24 0 1 0 48 0a24 24 0 1 0 -48 0','M58 58L88 88']);
+DEFS+=sym('funnel','0 0 200 200',['M10 22h180l-66 92v66H76v-66z'],['M10 22h180l-66 92v66H76v-66z']);
+DEFS+=sym('coin','0 0 60 60',['M6 30a24 24 0 1 0 48 0a24 24 0 1 0 -48 0'],['M6 30a24 24 0 1 0 48 0a24 24 0 1 0 -48 0','M30 14v32','M38 22h-12a6 6 0 0 0 0 12h8a6 6 0 0 1 0 12h-14']);
+DEFS+=sym('star','0 0 60 60',['M30 4l7.5 16.5L55 22l-13 12 3.8 17.5L30 42l-15.8 9.5L18 34 5 22l17.5-1.5z'],['M30 4l7.5 16.5L55 22l-13 12 3.8 17.5L30 42l-15.8 9.5L18 34 5 22l17.5-1.5z']);
+DEFS+=sym('pin','0 0 60 80',['M30 76C10 50 6 40 6 28a24 24 0 0 1 48 0c0 12-4 22-24 48z'],['M30 76C10 50 6 40 6 28a24 24 0 0 1 48 0c0 12-4 22-24 48z','M22 28a8 8 0 1 0 16 0a8 8 0 1 0 -16 0']);
+DEFS+=sym('flag','0 0 60 80',['M12 8l40 14-40 16z'],['M12 76V6','M12 8l40 14-40 16']);
+DEFS+=sym('ruler','0 0 120 40',['M4 6h112v28H4z'],['M4 6h112v28H4z','M20 6v10','M36 6v14','M52 6v10','M68 6v14','M84 6v10','M100 6v14']);
+DEFS+=sym('leaf','0 0 60 60',['M6 54C6 22 24 6 54 6c0 28-16 48-48 48z'],['M6 54C6 22 24 6 54 6c0 28-16 48-48 48z','M6 54L36 24']);
+DEFS+=sym('truck','0 0 160 90',['M6 14h84v50H6z','M90 28h34l24 20v16H90z'],['M6 14h84v50H6z','M90 28h34l24 20v16H90z','M100 34h18l12 14h-30z'],'<circle cx="36" cy="78" r="11" fill="#fff" stroke="#243049" stroke-width="4"/><circle cx="118" cy="78" r="11" fill="#fff" stroke="#243049" stroke-width="4"/>');
+(function(){
+  const arcs=['M50 12A38 38 0 0 1 83 69','M83 69A38 38 0 0 1 17 69','M17 69A38 38 0 0 1 50 12'];
+  const head='78,77.7 89.1,72.5 76.9,65.5';
+  DEFS+=`<symbol id="recycle" viewBox="0 0 100 100" overflow="visible"><g fill="none" style="stroke:var(--c)" stroke-width="9" stroke-linecap="round">${arcs.map(d=>`<path d="${d}"/>`).join('')}</g><g style="fill:var(--c)" stroke="#243049" stroke-width="3" stroke-linejoin="round"><polygon points="${head}"/><polygon points="${head}" transform="rotate(120 50 50)"/><polygon points="${head}" transform="rotate(240 50 50)"/></g></symbol>`;
+})();
+document.getElementById('defs').innerHTML='<defs>'+DEFS+'</defs>';
+
+/* ================= BUILD HELPERS ================= */
+const P={coral:'#ff9a7e',mint:'#7fe0bd',sky:'#8fd0f7',lemon:'#ffe08a',lilac:'#c4b2f7',tan:'#e8c796',silver:'#d5dde8',glass:'#a8e6dc',pink:'#ffb3cf',white:'#ffffff',gold:'#ffd54a',wood:'#e9c98a'};
+const INK='#243049';
+function din(o){let s='';
+  if(o.in!=null)s+=` data-in="${o.in}"`; if(o.out!=null)s+=` data-out="${o.out}"`;
+  for(const k of ['alt','alt2','alt3','alt4'])if(o[k]!=null)s+=` data-${k}="${o[k]}"`;
+  if(o.cnt)s+=` data-count-cue="${o.cnt[0]}" data-count-to="${o.cnt[1]}" data-count-dur="${o.cnt[2]}" data-count-dec="${o.cnt[3]||0}"`;
+  return s}
+const G=(inner,o={})=>`<g class="g ${o.c||'pop'} ${o.x||''}"${din(o)}${o.st?` style="${o.st}"`:''}>${inner}</g>`;
+const U=(id,x,y,w,h,col)=>`<use href="#${id}" x="${x}" y="${y}" width="${w}" height="${h}" style="--c:${col}"/>`;
+const PK=(kind,x,y,w,col,o={})=>G(U('pk-'+kind,x,y,w,w*1.6,col),o);
+const T=(html,x,y,o={})=>`<div class="tx ${o.c||''}" style="left:${x}px;top:${y}px;${o.w?`width:${o.w}px;`:''}font-size:${o.s||28}px;${o.col?`color:${o.col};`:''}${o.rot?`rotate:${o.rot}deg;`:''}${o.st||''}"${din(o)}>${html}</div>`;
+const D=(d,o={})=>`<path class="dr" d="${d}" pathLength="1" style="stroke:${o.col||INK};stroke-width:${o.w||4};--t:${o.t||1}s"${din(o)}/>`;
+const circ=(cx,cy,r)=>`M${cx+r} ${cy}a${r} ${r} 0 1 1 ${-2*r} 0a${r} ${r} 0 1 1 ${2*r} 0`;
+const BG=(base,blobs,o)=>`<div class="bg" style="background:${base}"${din(o)}>${blobs.map(b=>`<div class="blob" style="left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px;background:${b[4]};animation-delay:${b[5]||0}s"></div>`).join('')}</div>`;
+const KICK=(label,col)=>T(label,60,22,{c:'hw',s:38,col,in:0.3,wr:1})+`<svg class="art" style="pointer-events:none">${D(`M60 68q${label.length*3} -9 ${label.length*7} 0t${label.length*7} -2`,{col,w:5,in:0.8})}</svg>`;
+function bubble(x,y,w,h,tx){return `M${x+14} ${y}H${x+w-14}a14 14 0 0 1 14 14V${y+h-14}a14 14 0 0 1 -14 14H${tx+16}l-12 16l-4 -16H${x+14}a14 14 0 0 1 -14 -14V${y+14}a14 14 0 0 1 14 -14z`}
+const LQ={pump:[62,150],sachet:[44,140],pouch:[50,150],canister:[50,154]};
+function PKL(kind,x,y,w,col,o={}){
+  const [top,bot]=LQ[kind]; const s=w/100;
+  return `<g transform="translate(${x},${y}) scale(${s})">${G(`${U('pk-'+kind,0,0,100,160,col)}<g clip-path="url(#cp-${kind})"><rect class="liq" x="0" y="${top}" width="100" height="${bot-top}" fill="#ff9fc4"/><rect class="res" x="0" y="${bot-13}" width="100" height="16" fill="#ff9fc4"/></g>`,o)}</g>`;
+}
+const art=(inner)=>`<svg class="art" viewBox="0 0 1280 720">${inner}</svg>`;
+function seesaw(id,cx,py,len,angles,items,o={}){
+  const x0=cx-len/2;
+  return `<g class="plank" id="${id}" style="transform-origin:${cx}px ${py}px;${angles}"${din(o)}><rect class="bar" x="${x0}" y="${py-8}" width="${len}" height="18" rx="9" fill="${P.wood}"/>${items}</g>`;
+}
+function fulcrum(cx,py,h,o){return G(`<path class="bar" d="M${cx} ${py+2}L${cx-40} ${py+h}H${cx+40}z" fill="${P.lemon}"/><circle class="bar" cx="${cx}" cy="${py}" r="8" fill="#fff"/>`,{c:'up',...o})}
+
+/* ================= SCENE BUILDERS ================= */
+const BUILD={};
+
+BUILD.s0=()=>{
+  let a=BG('#fff1da',[[-140,-100,560,440,'#cfe9fb'],[800,380,560,430,'#cdf1df',-4],[430,-160,420,300,'#ffe3a8',-8]],{in:0});
+  let s='';
+  const kinds=[['plastic',P.sky],['glass',P.glass],['can',P.silver],['carton',P.tan],['pouch',P.lilac]];
+  kinds.forEach(([k,c],i)=>{ s+=PK(k,640+(i-2)*130-38,470,76,c,{in:`${1.4+i*.35}`,c:'drop'}) });
+  s+=D('M360 258q280 -22 560 0',{col:'#ff7f63',w:8,in:1.2,t:1.2});
+  let t='';
+  t+=T('UNWRAP',140,70,{c:'hd c',w:1000,s:150,in:0.3,wr:1});
+  t+=T('Unpacking Whether Replacement Alternatives Perform',140,272,{c:'hw c',w:1000,s:50,col:'var(--mute)',in:1.2,wr:1});
+  t+=T('Paridhi Mittal &nbsp;·&nbsp; Eshika Mishra &nbsp;·&nbsp; Keshav Goyal &nbsp;·&nbsp; Kunal Jain',90,352,{c:'hd c',w:1100,s:32,in:2.2});
+  t+=T('CM617 Sustainability Principles and Practices &nbsp;·&nbsp; IIT Bombay',140,402,{c:'hw c',w:1000,s:36,col:'#ff7f63',in:2.8});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+BUILD.s1=()=>{
+  let a='';
+  a+=BG('#fff1da',[[-140,-100,560,440,'#cfe9fb'],[820,400,540,420,'#cdf1df',-4]],{in:0,out:'n31'});
+  a+=BG('#e9f4ff',[[720,-120,560,420,'#d6f2e5'],[-150,420,540,400,'#ffe7c6',-6]],{in:'n31'});
+  let svg='';
+  svg+=PK('plastic',320,150,150,P.sky,{in:'bottles',out:'n31',c:'lf'});
+  svg+=PK('glass',810,150,150,P.glass,{in:'bottles+0.7',out:'n31',c:'rt'});
+  svg+=D('M985 190l30 34l62 -78',{col:'#3fbf98',w:12,in:'glass',out:'n31',t:.8});
+  const win=[1,4,6,9,11,12,15,18,20,23,25,27,30]; const cols=[8,8,8,7]; let n=0;
+  cols.forEach((c,r)=>{for(let i=0;i<c;i++){
+    const cx=640-(c-1)*35+i*70, cy=190+r*68, w=win.indexOf(n)>=0, k=win.indexOf(n);
+    svg+=`<g transform="translate(${cx},${cy})">${G(`<circle r="26"/><path class="ck" d="M-12 1l8 9l16 -19" pathLength="1"/><path class="xx" d="M-9 -9l18 18M9 -9l-18 18" pathLength="1"/>`,{c:'fall',x:'tok '+(w?'w':'l'),in:`n31+${(.1+n*.06).toFixed(2)}`,alt:`n13+${((w?k:n%13)*.09).toFixed(2)}`})}</g>`;
+    n++; }});
+  let t='';
+  t+=KICK('the hook','#ff7f63');
+  t+=T('which one is better for the planet?',240,86,{c:'hw c',w:800,s:48,in:'bottles+0.5',out:'n31',wr:1});
+  t+=T('plastic',290,400,{c:'hw c',w:200,s:44,in:'bottles+0.3',out:'n31'});
+  t+=T('glass',780,400,{c:'hw c',w:200,s:44,in:'bottles+1',out:'n31'});
+  t+=T('vs',590,250,{c:'hw c',w:100,s:60,col:'var(--mute)',in:'bottles+0.6',out:'n31'});
+  t+=T('“obviously glass!”',1000,240,{c:'hw',s:38,col:'#3fbf98',in:'glass+0.5',out:'n31',rot:-6});
+  t+=T('<span class="cv co">0</span> real comparisons',240,60,{c:'hd c',w:800,s:46,in:'n31',cnt:['n31',31,2.2,0]});
+  t+=T('only <span class="mi">13</span> beat plastic',240,470,{c:'hd c',w:800,s:48,in:'n13'});
+  t+=T('“plastic-free” = greener<span class="co" style="font-size:66px">?</span>',140,545,{c:'hd c',w:1000,s:50,in:'q',wr:1});
+  return a+`<div class="inner">${art(svg)}${t}</div>`;
+};
+
+BUILD.s2=()=>{
+  let a='';
+  a+=BG('#e6f4ff',[[-120,-90,520,420,'#cdeedf'],[860,380,520,420,'#ffefc2',-5]],{in:0,out:'probs'});
+  a+=BG('#ffeadb',[[720,-120,560,420,'#ffd3dc'],[-120,400,540,420,'#e3d9ff',-4]],{in:'probs'});
+  let s='';
+  s+=PK('plastic',90,220,120,P.sky,{in:0.8,out:'probs',c:'lf'});
+  s+=D('M250 250C420 150 800 150 1150 215M1112 178l40 38l-52 14',{col:INK,w:6,in:'m1-0.6',out:'probs',t:1.4});
+  s+=PK('glass',340,250,105,P.glass,{in:'m1',out:'probs'});
+  s+=PK('can',570,250,105,P.silver,{in:'m2',out:'probs'});
+  s+=PK('carton',790,250,105,P.tan,{in:'m3',out:'probs'});
+  s+=PK('pouch',1010,250,105,P.lilac,{in:'m4',out:'probs'});
+  s+=D('M180 540q300 -16 560 0t380 -4',{col:'#ff7f63',w:5,in:'m4+2.1',out:'probs'});
+  s+=`<g transform="translate(130,300) rotate(-8)">${G(U('doc',0,0,90,112,'#fff'),{in:'p1'})}</g>`;
+  s+=`<g transform="translate(250,300) rotate(8)">${G(U('doc',0,0,90,112,'#fff'),{in:'p1+0.3'})}</g>`;
+  s+=G(`<path class="bub" d="${bubble(70,200,170,58,150)}"/>`,{in:'p1+0.6',c:'pop'});
+  s+=G(`<path class="bub" d="${bubble(230,160,170,58,300)}"/>`,{in:'p1+1.5',c:'pop'});
+  s+=G(U('bin',540,290,84,105,P.mint),{in:'p2'});
+  s+=`<g class="spin">${G(U('recycle',552,200,60,60,'#3fbf98'),{in:'p2+0.3',c:'pop'})}</g>`;
+  s+=G(U('pile',690,325,120,87,P.tan),{in:'p2+1.0'});
+  s+=`<g class="flame">${G(U('flame',715,255,46,62,P.coral),{in:'p2+1.4',c:'pop'})}</g>`;
+  s+=`<g class="flame" style="animation-delay:-.3s">${G(U('flame',758,270,38,52,P.coral),{in:'p2+1.6',c:'pop'})}</g>`;
+  s+=D('M650 220v220',{col:'#243049',w:3,in:'p2+0.8'});
+  s+=PKL('pump',1000,250,110,P.sky,{in:'p3',alt:'p3+2.6',c:'pop',x:'pk drain'});
+  s+=D('M1130 400c26 8 34 -4 40 -22m-6 -2l6 -24l22 14',{col:'#ff7f63',w:4,in:'p3+3.4'});
+  s+=D(circ(220,125,36),{col:'#ff7f63',w:4,in:'p1'})+D(circ(640,125,36),{col:'#ff7f63',w:4,in:'p2'})+D(circ(1060,125,36),{col:'#ff7f63',w:4,in:'p3'});
+  let t=KICK('the problem','#3fa0e0');
+  t+=T('plastic',60,420,{c:'hw c',w:200,s:40,in:1,out:'probs'});
+  t+=T('glass',320,450,{c:'hw c',w:150,s:38,in:'m1',out:'probs'});
+  t+=T('aluminium',535,450,{c:'hw c',w:170,s:38,in:'m2',out:'probs'});
+  t+=T('cartons',770,450,{c:'hw c',w:150,s:38,in:'m3',out:'probs'});
+  t+=T('refills',995,450,{c:'hw c',w:150,s:38,in:'m4',out:'probs'});
+  t+=T('“it saves carbon” — says life cycle assessment (LCA)',180,500,{c:'hw c',w:1000,s:44,in:'m4+1.6',out:'probs',wr:1});
+  t+=T('three problems with the evidence',140,36,{c:'hd c',w:1000,s:46,in:'probs',wr:1});
+  [['1',220,'p1'],['2',640,'p2'],['3',1060,'p3']].forEach(([n,cx,c])=>{t+=T(n,cx-24,98,{c:'hd c',w:48,s:46,col:'#ff7f63',in:c})});
+  t+=T('carton wins!',82,214,{c:'hw c',w:146,s:30,in:'p1+0.8'});
+  t+=T('glass wins!',242,174,{c:'hw c',w:146,s:30,in:'p1+1.7'});
+  t+=T('they disagree',70,445,{c:'hd c',w:300,s:34,in:'p1+0.5'});
+  t+=T('Europe',520,410,{c:'hw c',w:130,s:36,in:'p2+0.5'});
+  t+=T('India',690,410,{c:'hw c',w:130,s:36,in:'p2+1.2'});
+  t+=T('built on European waste systems',470,472,{c:'hd c',w:360,s:30,in:'p2+1.8'});
+  t+=T('priced per kg <span class="sk">filled</span>',930,445,{c:'hd c',w:290,s:32,in:'p3+0.5'});
+  t+=T('…not per kg actually used',930,483,{c:'hw c',w:290,s:34,col:'#ff7f63',in:'p3+3'});
+  t+=T('stuck inside!',1150,372,{c:'hw',s:34,col:'#ff7f63',in:'p3+3.6'});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+BUILD.s3=()=>{
+  let a=BG('#f1ebff',[[-140,-80,540,420,'#d3e8ff'],[780,380,560,440,'#ffe9cf',-6]],{in:0});
+  let s='';
+  s+=D('M30 528C120 490 160 520 200 508S420 548 640 508S900 478 1060 508S1200 534 1255 500',{col:'#cdbdf7',w:22,in:'h1-1',t:3});
+  [[200,'h1'],[640,'h2'],[1060,'h3']].forEach(([x,c])=>{s+=G(`<circle class="bar" cx="${x}" cy="508" r="15" fill="#ff9a7e"/>`,{in:c,c:'pop'})});
+  s+=G(`<path class="bar" d="M200 390l-30 38h60z" fill="${P.lemon}"/>`,{in:'h1',c:'up'});
+  s+=seesaw('pl1',200,380,220,'--a1:10deg;--a2:-10deg;--a3:0deg',
+      PK('plastic',112,294,48,P.sky,{in:'h1+0.3',c:'pop'})+PK('glass',244,294,48,P.glass,{in:'h1+0.5',c:'pop'}),{alt:'h1+1.0',alt2:'h1+2.4',alt3:'h1+3.6'});
+  s+=`<g class="spin">${G(U('recycle',580,240,120,120,'#3fbf98'),{in:'h2',c:'pop'})}</g>`;
+  s+=G(U('truck',590,352,100,56,P.sky),{in:'h2+0.6',c:'rt'});
+  s+=PKL('pump',1000,200,100,P.sky,{in:'h3',alt:'h3+0.9',c:'pop',x:'pk drain'});
+  s+=`<g class="wobble">${G(U('magnifier',1085,205,100,100,'#e6f6ff'),{in:'h3+1.4',c:'pop'})}</g>`;
+  [[200,'h1'],[640,'h2'],[1060,'h3']].forEach(([x,c])=>{s+=D(circ(x,128,34),{col:'#a58af0',w:4,in:c})});
+  s+=G(U('magnifier',66,566,50,50,'#e6f6ff'),{in:'stages+0.3',c:'pop'});
+  s+=`<g class="spin">${G(U('recycle',506,566,50,50,'#3fbf98'),{in:'stages+1.1',c:'pop'})}</g>`;
+  s+=G(U('ruler',870,572,80,26,P.lemon),{in:'stages+1.9',c:'pop'});
+  let t=KICK('our approach','#a58af0');
+  t+=T('three questions',340,24,{c:'hd c',w:600,s:46,in:0.5,wr:1});
+  [[200,'1','h1'],[640,'2','h2'],[1060,'3','h3']].forEach(([x,n,c])=>{t+=T(n,x-20,104,{c:'hd c',w:40,s:40,col:'#a58af0',in:c})});
+  t+=T('is it lower in carbon<br>than the plastic it replaces?',20,440,{c:'hw c',w:360,s:28,in:'h1+0.4'});
+  t+=T('does that hold under<br><span class="co">Indian</span> collection rates?',460,440,{c:'hw c',w:360,s:28,in:'h2+0.4'});
+  t+=T('what if we count the<br>product <span class="co">left stuck</span> in the pack?',880,440,{c:'hw c',w:360,s:28,in:'h3+0.4'});
+  t+=T('stage 1 · meta-analysis',120,568,{c:'hd',s:26,col:'#3fa0e0',in:'stages+0.3'});
+  t+=T('stage 2 · recycling model',560,568,{c:'hd',s:26,col:'#3fbf98',in:'stages+1.1'});
+  t+=T('stage 3 · honest unit',962,568,{c:'hd',s:26,col:'#d9a400',in:'stages+1.9'});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+BUILD.s4=()=>{
+  let a='';
+  a+=BG('#fff6dc',[[-140,-90,540,420,'#e1ecff'],[820,400,520,420,'#ffe3e8',-5]],{in:0,out:'avg'});
+  a+=BG('#e6f7ef',[[740,-120,560,420,'#cdeeff'],[-120,420,540,400,'#fff0c6',-5]],{in:'avg',out:'twist'});
+  a+=BG('#ffe8ee',[[-120,-100,540,420,'#ffe1a8'],[800,380,540,440,'#e6dcff',-3]],{in:'twist'});
+  let s='';
+  s+=G(U('funnel',130,170,300,300,'#e8f4ff'),{in:'f90-0.2',out:'avg',c:'up'});
+  s+=D('M205 458v90q0 14 14 14h122q14 0 14 -14v-90',{col:INK,w:4,in:'f24',out:'avg'});
+  let kk=0;
+  for(let i=0;i<90;i++){
+    const col=i%15,row=Math.floor(i/15),x=206+col*11.6+(row%2)*4,y=214+row*14,keep=(i*37)%90<24;
+    const sx=((i*53)%240)-120,sr=((i*29)%80)-40; let st=`--sx:${sx}px;--sr:${sr}deg;`; let at={in:`f90+${(i*.012).toFixed(2)}`,out:'avg'};
+    if(keep){const bx=224+(kk%6)*19-x,by=484+Math.floor(kk/6)*22-y,nx=280-x+((kk%6)-2.5)*3,ny=424-y;
+      st+=`--nx:${nx.toFixed(1)}px;--ny:${ny.toFixed(1)}px;--bx:${bx.toFixed(1)}px;--by:${by.toFixed(1)}px;`;at.alt=`f24+${(kk*.035).toFixed(2)}`;at.alt2=`f24+${(1.3+kk*.035).toFixed(2)}`;kk++}
+    else{st+=`--lx:${(i%2?1:-1)*(160+(i*13)%140)}px;--lr:${((i*17)%120)-60}deg;`;at.alt=`f24+${((i%12)*.04).toFixed(2)}`}
+    s+=`<g transform="translate(${x.toFixed(1)},${y})"><g class="g pp ${keep?'k':'l'}" style="${st}"${din(at)}><rect width="12" height="16" rx="2"/><path d="M3 5h6M3 9h6"/></g></g>`;
+  }
+  s+=`<g transform="translate(700,170)">${G(U('doc',0,0,130,160,'#fff'),{in:'within-1.2',out:'f31',c:'lf'})}</g>`;
+  s+=`<g transform="translate(1040,170)">${G(U('doc',0,0,130,160,'#fff'),{in:'within-0.9',out:'f31',c:'rt'})}</g>`;
+  s+=PK('plastic',732,225,32,P.sky,{in:'within',out:'f31'})+PK('carton',770,225,32,P.tan,{in:'within+0.2',out:'f31'});
+  s+=PK('plastic',1072,225,32,P.sky,{in:'within+0.4',out:'f31'})+PK('glass',1110,225,32,P.glass,{in:'within+0.6',out:'f31'});
+  s+=D('M732 288q34 22 70 0',{col:'#3fbf98',w:5,in:'within+0.8',out:'f31'})+D('M1072 288q34 22 70 0',{col:'#3fbf98',w:5,in:'within+1.1',out:'f31'});
+  s+=D('M845 250h170',{col:'#ff7f63',w:5,in:'within+1.4',out:'f31'})+D('M912 220l36 60m0 -60l-36 60',{col:'#ff7f63',w:7,in:'within+1.9',out:'f31'});
+  for(let i=0;i<31;i++){const cx=718+(i%8)*62,cy=200+Math.floor(i/8)*62;
+    s+=`<g transform="translate(${cx},${cy})">${G(`<circle class="bar" cx="0" cy="0" r="14" fill="${P.coral}"/><circle class="bar" cx="14" cy="0" r="14" fill="${P.mint}"/>`,{in:`f31+${(i*.05).toFixed(2)}`,out:'avg',c:'pop'})}</g>`}
+  const X=r=>560+Math.log2(r)*230;
+  s+=D('M560 126V610',{col:INK,w:3,in:'avg',out:'twist'});
+  const rows=[['avg',170,1.38,'#ffd25a',null,null],['carton',265,.63,'#7fe0bd','carton',P.tan],['reuse',360,.91,'#bdeed8','glass',P.glass],['glass',455,2.58,'#ffa58f','glass',P.glass],['alu',550,2.45,'#ffa58f','can',P.silver]];
+  rows.forEach(([c,y,r,col,kind,kc])=>{
+    const x1=X(r),neg=r<1,x=Math.min(560,x1),w=Math.abs(x1-560);
+    s+=`<rect class="bar hb ${neg?'neg':''}" x="${x}" y="${y-22}" width="${w}" height="44" rx="12" fill="${col}"${din({in:c,out:'twist'})}/>`;
+    if(kind){const ex=neg?x1-48:x1+14; s+=`<g transform="translate(${ex},${y-36})">${G(U('pk-'+kind,0,0,34,54,kc),{in:c,out:'twist',c:'rider',st:`--rx:${-(x1-560)}px`})}</g>`}
+  });
+  const kinds=[['plastic',P.sky],['carton',P.tan],['can',P.silver],['plastic',P.sky],['carton',P.tan]];
+  kinds.forEach(([k,c],i)=>{const x=40+i*130; const st=i!==3;
+    s+=`<g transform="translate(${x},250)">${G(U('doc',0,0,100,125,'#fff'),{in:`spons+${i*.3}`,c:'up'})}</g>`;
+    s+=PK(k,x+32,282,38,c,{in:`spons+${(i*.3+.2).toFixed(1)}`});
+    s+=G(U('coin',x+62,222,40,40,P.gold),{in:`spons+${(i*.3+.4).toFixed(1)}`,c:'pop'});
+    if(st)s+=G(U('star',x+28,170,44,44,P.gold),{in:`spons+${(1.8+i*.5).toFixed(1)}`,c:'pop'});
+    else s+=D(`M${x+20} 180l50 50m0 -50l-50 50`,{col:'#ff7f63',w:8,in:'spons+3.3'});
+  });
+  s+=`<rect class="bar hb" x="720" y="296" width="430" height="44" rx="12" fill="#8fd0f7"${din({in:'ind+0.3'})}/>`;
+  s+=`<rect class="bar hb" x="720" y="372" width="318" height="44" rx="12" fill="#ffa58f"${din({in:'ind+0.9'})}/>`;
+  s+=D('M1042 394h104M1046 380v28M1142 380v28',{col:'#3fbf98',w:5,in:'ind+1.8'});
+  s+=D('M620 150q160 -16 330 -2',{col:'#ffd25a',w:9,in:'twist+0.6'});
+  let t=KICK('stage 1 · paired meta-analysis','#3fa0e0');
+  t+=T('<span class="cv co">0</span>',430,160,{c:'hd',s:88,in:'f90',out:'avg',cnt:['f90',90,1.4,0]});
+  t+=T('records<br>screened',545,185,{c:'hw',s:36,in:'f90+0.3',out:'avg'});
+  t+=T('<span class="cv mi">0</span>',430,452,{c:'hd',s:88,in:'f24',out:'avg',cnt:['f24',24,1.2,0]});
+  t+=T('reports<br>kept',545,477,{c:'hw',s:36,in:'f24+0.3',out:'avg'});
+  t+=T('study A',690,128,{c:'hw c',w:150,s:36,in:'within',out:'f31'});
+  t+=T('study B',1030,128,{c:'hw c',w:150,s:36,in:'within+0.3',out:'f31'});
+  t+=T('same rules for both packs',690,330,{c:'hw c',w:230,s:30,col:'#3fbf98',in:'within+1',out:'f31'});
+  t+=T('never mix rules',930,318,{c:'hw c',w:200,s:30,col:'#ff7f63',in:'within+2.1',out:'f31'});
+  t+=T('compare inside the same study',640,470,{c:'hw c',w:580,s:40,in:'within+2.4',out:'f31',wr:1});
+  t+=T('<span class="cv mi">0</span> pairs · 16 studies',680,430,{c:'hd',s:42,in:'f31',out:'avg',cnt:['f31',31,1.3,0]});
+  t+=T('same assumptions inside every pair',680,490,{c:'hw',s:36,in:'f31+1.5',out:'avg'});
+  t+=T('lower carbon than plastic',250,92,{c:'hw c',w:300,s:34,col:'#3fbf98',in:'avg',out:'twist'});
+  t+=T('higher carbon',580,92,{c:'hw c',w:240,s:34,col:'#ff7f63',in:'avg+0.2',out:'twist'});
+  t+=T('plastic = 1',500,612,{c:'hw c',w:120,s:30,in:'avg',out:'twist'});
+  t+=T('(log scale)',1020,598,{c:'hw',s:26,col:'var(--mute)',in:'alu+1',out:'twist'});
+  [['avg',170,'all alternatives'],['carton',265,'cartons'],['reuse',360,'reusable glass'],['glass',455,'single-use glass'],['alu',550,'aluminium can']].forEach(([c,y,l])=>{t+=T(l,20,y-18,{c:'hw',w:330,s:36,st:'text-align:right;',in:c,out:'twist'})});
+  [['avg',1.38,'1.38×','#c99700',170],['carton',.63,'0.63×','#3fbf98',265],['reuse',.91,'0.91×','#3fbf98',360],['glass',2.58,'2.58×','#ff7f63',455],['alu',2.45,'2.45×','#ff7f63',550]].forEach(([c,r,l,col,y])=>{const x1=X(r); const lx=(r<1)?578:x1+(c==='avg'?14:66); t+=T(l,lx,y-22,{c:'hd',s:34,col,in:`${c}+1`,out:'twist'})});
+  t+=T('better in 9 of 9 pairs',578,296,{c:'hw',s:30,col:'#3fbf98',in:'carton+1.3',out:'twist'});
+  t+=T('plot twist!',620,60,{c:'hd',s:78,col:'#ff7f63',in:'twist',rot:-4,wr:1});
+  t+=T('<span class="cv mi">0</span> of 5 sponsored studies:',40,410,{c:'hd',s:34,in:'spons+1.8',cnt:['spons+1.8',4,1.2,0]});
+  t+=T('the sponsor’s own material ranked best',40,452,{c:'hw',s:38,in:'spons+2.6'});
+  t+=T('industry-compiled table',720,200,{c:'hw',s:38,in:'ind'});
+  t+=T('original papers',728,252,{c:'hd',s:22,col:'var(--mute)',in:'ind+0.5'});
+  t+=T('industry table',728,420,{c:'hd',s:22,col:'var(--mute)',in:'ind+1'});
+  t+=T('<span class="cv mi">0</span>% kinder to alternatives',700,470,{c:'hd',w:540,s:42,in:'ind+1.8',cnt:['ind+1.8',26,1.4,0]});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+BUILD.s5=()=>{
+  let a='';
+  a+=BG('#e2f2ff',[[-130,-90,540,420,'#cdeedf'],[800,380,540,430,'#cfe3ff',-4]],{in:0,out:'inr'});
+  a+=BG('#ffe6cc',[[-130,-80,540,420,'#ffd0d8'],[800,380,540,430,'#ffe6a3',-4]],{in:'inr'});
+  let s='';
+  s+=fulcrum(330,458,92,{in:'eu-0.4'});
+  s+=D('M120 552h420',{col:INK,w:5,in:'eu-0.2'});
+  const items=PK('plastic',116,304,78,P.sky,{in:'eu-0.2',c:'pop'})
+    +PK('can',444,314,78,P.silver,{in:'eu+0.1',out:'gl',c:'drop'})
+    +PK('glass',436,304,84,P.glass,{in:'gl+0.3',c:'drop'});
+  s+=seesaw('pl5',330,458,480,'--a1:13deg;--a2:5deg;--a3:0deg;--a4:22deg',items,{in:'eu-0.4',alt:'eu+0.9',alt2:'inr',alt3:'par',alt4:'gl+0.5'});
+  const rings=[[800,'can',P.silver,85,'#8c9bb3','aluminium',0],[960,'plastic',P.sky,70,'#4fb0ee','PET',0.5],[1120,'glass',P.glass,60,'#3fbf98','glass',1]];
+  rings.forEach(([x,k,c,p,col,l,cue])=>{
+    s+=`<circle class="rgt" cx="${x}" cy="230" r="50"${din({in:`india+${cue}`})}/>`;
+    s+=`<circle class="rg" cx="${x}" cy="230" r="50" pathLength="100" style="stroke:${col};--off:${100-p}"${din({in:`india+${cue+.3}`})}/>`;
+    s+=PK(k,x-17,198,34,c,{in:`india+${cue}`,c:'pop'});
+  });
+  s+=D('M720 508H1200',{col:INK,w:8,in:'par',t:1});
+  s+=G(U('flag',1125,430,50,68,'#3fbf98'),{in:'par+0.6',c:'pop'});
+  const wh=x=>`<g transform="translate(${x},497)"><g class="wheel"><circle class="bar" r="9" fill="#fff"/><path d="M-9 0H9M0 -9V9" stroke="#243049" stroke-width="2"/></g></g>`;
+  s+=G(`${U('truck',598,438,120,68,P.sky)}${wh(625)}${wh(686)}`,{in:'ind85-0.6',c:'rt',x:'truck',alt:'ind85+0.3'});
+  s+=D('M1130 560q20 14 40 0',{col:'#ff7f63',w:4,in:'ind85+2.2'});
+  let t=KICK('stage 2 · indian collection rates','#d9a400');
+  t+=T('Europe’s rates',90,94,{c:'hw',s:44,col:'#3fa0e0',in:'eu',out:'inr'});
+  t+=T('India’s rates',90,94,{c:'hw',s:44,col:'#e06a2c',in:'inr'});
+  t+=T('India: share collected for recycling',700,92,{c:'hw c',w:520,s:38,in:'india',wr:1});
+  rings.forEach(([x,k,c,p,col,l,cue])=>{
+    t+=T(`<span class="cv">0</span>%`,x-60,290,{c:'hd c',w:120,s:34,in:`india+${cue}`,cnt:[`india+${cue+.3}`,p,1.6,0]});
+    t+=T(l,x-60,330,{c:'hw c',w:120,s:30,in:`india+${cue+.2}`});
+  });
+  t+=T('PET = 1.0',56,496,{c:'hw',s:36,col:'#3fa0e0',in:'eu-0.2'});
+  t+=T('aluminium can <span class="co">1.73×</span> PET',70,582,{c:'hd c',w:520,s:27,in:'eu+1.3',out:'inr'});
+  t+=T('aluminium can <span class="mi">1.16×</span> PET',70,582,{c:'hd c',w:520,s:27,in:'inr+0.8',out:'par'});
+  t+=T('level only at <span class="mi">~89%</span> collected',70,582,{c:'hd c',w:520,s:27,in:'par+0.5',out:'gl'});
+  t+=T('glass ≈ <span class="co">5×</span> PET — at any rate',70,582,{c:'hd c',w:520,s:27,in:'gl+0.8'});
+  t+=T('collection rate needed to match PET',700,380,{c:'hw c',w:520,s:34,in:'par'});
+  t+=T('0%',704,530,{c:'hw',s:28,in:'par'});
+  t+=T('100%',1170,530,{c:'hw',s:28,in:'par'});
+  t+=T('89%',1130,396,{c:'hd c',w:80,s:30,col:'#3fbf98',in:'par+0.8'});
+  t+=T('so close… 4 points short',930,566,{c:'hw',s:38,col:'#ff7f63',in:'ind85+2.4'});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+BUILD.s6=()=>{
+  let a='';
+  a+=BG('#eefaf2',[[-130,-100,540,420,'#e1d6ff'],[820,400,520,420,'#cdf1ee',-4]],{in:0,out:'up'});
+  a+=BG('#f0ecff',[[740,-120,560,420,'#cfe0ff'],[-120,420,540,400,'#ffe9bd',-5]],{in:'up',out:'tie'});
+  a+=BG('#fff0e4',[[-130,-100,540,430,'#ffd3dc'],[800,390,540,430,'#e5dcff',-3]],{in:'tie'});
+  let s='';
+  const xs=[220,500,780,1060];
+  const packs=[['sachet',P.lilac,'sachet'],['pump',P.sky,'pump'],['pouch',P.mint,'pouch'],['canister',P.coral,'can']];
+  packs.forEach(([k,c,cue],i)=>{ s+=PKL(k,xs[i]-55,214,110,c,{in:cue,alt:cue+'+0.4',alt2:cue+'+1.8',alt3:'up',out:'tie',c:'pop',x:'pk',st:'--ty:172px'}) });
+  const base=470, k=330;
+  const H=[[.62,.869],[.495,.75],[.139,.217],[.137,.303]], pct=['+38%','+50%','+54%','+121%'];
+  xs.forEach((x,i)=>{
+    const h1=H[i][0]*k,h2=H[i][1]*k;
+    s+=`<rect class="bar vb" x="${x-42}" y="${base-h1}" width="84" height="${h1}" rx="8" fill="#c9d3e6"${din({in:`up+${i*.5}`,out:'tie'})}/>`;
+    s+=`<rect class="bar vb" x="${x-42}" y="${base-h2}" width="84" height="${h2-h1}" rx="8" fill="#ffc27a"${din({in:`up+${(i*.5+1.2).toFixed(1)}`,out:'tie'})}/>`;
+  });
+  s+=D('M80 470H1200',{col:INK,w:5,in:'up',out:'tie'});
+  s+=fulcrum(400,474,86,{in:'tie-0.3'});
+  s+=D('M180 562h440',{col:INK,w:5,in:'tie'});
+  const items=PK('canister',176,330,90,P.coral,{in:'tie+0.1',c:'drop'})+PK('pouch',514,330,90,P.mint,{in:'tie+0.5',c:'drop'});
+  s+=seesaw('pl6',400,474,480,'--a1:-10deg',items,{in:'tie-0.3',alt:'lost'});
+  s+=G(U('star',520,185,70,70,P.gold),{in:'pw',c:'pop'});
+  let t=KICK('stage 3 · the honest functional unit','#d9a400');
+  t+=T('usual unit: per kg <span class="sk">filled</span>',60,86,{c:'hw',s:42,in:'filled',out:'up'});
+  t+=T('stuck product = <span class="co">wasted carbon</span>',640,86,{c:'hw',s:42,in:'waste',out:'up'});
+  const nm=['sachet 6 mL','pump 200 mL','refill pouch 500 mL','canister 2 L'], rs=['3–11% stuck','7.1% stuck','2.7% stuck','3.2% stuck + unused'];
+  packs.forEach(([kd,c,cue],i)=>{
+    t+=T(nm[i],xs[i]-110,408,{c:'hw c',w:220,s:34,in:cue,out:'up'});
+    t+=T(rs[i],xs[i]-110,450,{c:'hw c',w:220,s:32,col:'#ff7f63',in:cue+'+1.2',out:'up'});
+  });
+  const nm2=['sachet','pump','pouch','canister'];
+  xs.forEach((x,i)=>{
+    t+=T(pct[i],x-60,base-H[i][1]*k-52,{c:'hd c',w:120,s:i==3?42:36,col:'#ff7f63',in:`up+${(i*.5+1.8).toFixed(1)}`,out:'tie'});
+    t+=T(nm2[i],x-70,596,{c:'hw c',w:140,s:30,in:'up+0.3',out:'tie'});
+  });
+  t+=T('■ per kg filled',60,86,{c:'hw',s:36,col:'#7f8fb0',in:'up',out:'tie'});
+  t+=T('■ extra, once stuck product is counted',300,86,{c:'hw',s:36,col:'#e8962a',in:'up+0.4',out:'tie'});
+  t+=T('per kg <span class="sk">filled</span>: canister 0.14 = pouch 0.14',730,300,{c:'hd',w:500,s:27,in:'tie+0.8',out:'lost'});
+  t+=T('a tie!',760,350,{c:'hw',s:48,col:'#d9a400',in:'tie+1.4',out:'lost'});
+  t+=T('per kg <span class="li">used</span>: canister 0.30 vs pouch 0.22',730,300,{c:'hd',w:500,s:27,in:'lost+0.5'});
+  t+=T('<span class="cv co">1.0</span>× worse — the canister loses',730,346,{c:'hd',w:500,s:34,in:'lost+1',cnt:['lost+1',1.4,1.2,1]});
+  t+=T('sachet, the usual villain, is only partly worse<br>than a pump bottle (1.25× → 1.16×)',730,420,{c:'hw',w:500,s:32,in:'lost+3.4'});
+  t+=T('refill pouches win either way<br>(≈ 0.3× a pump bottle)',730,508,{c:'hw',w:500,s:34,col:'#3fbf98',in:'pw'});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+BUILD.s7=()=>{
+  let a=BG('#eef9e6',[[-140,-100,560,430,'#d6f0ff'],[800,380,560,430,'#fff1bd',-5]],{in:0});
+  let s='';
+  s+=PK('carton',165,128,100,P.tan,{in:'c1',c:'pop'});
+  s+=D('M290 168l22 26l44 -56',{col:'#3fbf98',w:9,in:'c1+0.8'});
+  s+=G(U('pin',595,128,86,115,'#ff9a7e'),{in:'c2',c:'pop'});
+  s+=`<g class="spin">${G(U('recycle',690,150,64,64,'#3fbf98'),{in:'c2+0.5',c:'pop'})}</g>`;
+  s+=PK('pump',985,128,80,P.sky,{in:'c3',c:'pop'});
+  s+=G(U('ruler',1080,210,110,37,P.lemon),{in:'c3+0.6',c:'rt'});
+  s+=D('M1196 700C1198 670 1200 650 1206 626',{col:'#3fbf98',w:6,in:'thx+0.4'});
+  s+=G(U('leaf',1170,610,60,60,'#7fe0bd'),{in:'thx+0.8',c:'pop'})+G(U('leaf',1210,580,50,50,'#a8e6a0'),{in:'thx+1.2',c:'pop'});
+  let t=KICK('conclusions','#3fbf98');
+  t+=T('plastic replacement is <span class="hlc">not</span> automatically greener',90,66,{c:'hd c',w:1100,s:44,in:0.5,wr:1});
+  t+=T('material',100,300,{c:'hd c',w:240,s:34,col:'#d98a1a',in:'c1'});
+  t+=T('cartons reliably win,<br>reuse helps,<br>single-use glass &amp; aluminium<br>usually lose',70,342,{c:'hw c',w:300,s:27,in:'c1+0.5'});
+  t+=T('place',520,300,{c:'hd c',w:240,s:34,col:'#ff7f63',in:'c2'});
+  t+=T('Indian collection rates<br>change the answer,<br>most of all for aluminium',490,342,{c:'hw c',w:300,s:27,in:'c2+0.5'});
+  t+=T('unit',930,300,{c:'hd c',w:240,s:34,col:'#4fb0ee',in:'c3'});
+  t+=T('judge packs per unit<br>of product <span class="hlm">actually used</span>,<br>with independent evidence',890,342,{c:'hw c',w:320,s:27,in:'c3+0.5'});
+  t+=T('next time someone says “plastic-free”, ask:',140,490,{c:'hw c',w:1000,s:34,in:'q',wr:1});
+  t+=T('compared to what?',60,535,{c:'hd c',w:500,s:48,col:'#ff7f63',in:'q+1.6',wr:1});
+  t+=T('where?',520,535,{c:'hd c',w:260,s:48,col:'#4fb0ee',in:'q+2.8',wr:1});
+  t+=T('who paid?',760,535,{c:'hd c',w:320,s:48,col:'#3fbf98',in:'q+3.8',wr:1});
+  return a+`<div class="inner">${art(s)}${t}</div>`;
+};
+
+/* ================= VOICE-OVER SCRIPT (also the subtitles) ================= */
+const WPM = 122;
+const SCENES = [
+ {id:'s0', name:'Title', fixed:4, vo:''},
+ {id:'s1', name:'Hook', vo:`Picture a [[bottles]]plastic bottle and a glass bottle. Which one is better for the planet? Almost everyone says [[glass]]glass. We checked [[n31]]thirty-one real comparisons from published studies. Replacements for plastic had a lower carbon footprint in only [[n13]]thirteen of them. So, is [[q]]“plastic-free” really greener?`},
+ {id:'s2', name:'Problem', vo:`Governments and brands are pushing to replace plastic with [[m1]]glass, [[m2]]aluminium, [[m3]]cartons and [[m4]]refills. The carbon case comes from life cycle assessments. But these studies have [[probs]]three problems. One: they [[p1]]disagree with each other. Two: they assume [[p2]]European waste systems, where most material is recycled, while in India a lot of waste is never collected. Three: they measure the pack per kilogram of product [[p3]]filled, not per kilogram actually used.`},
+ {id:'s3', name:'Approach', vo:`So we asked three questions. [[h1]]One: is replacement packaging actually lower in carbon than the plastic it replaces? [[h2]]Two: does that change under Indian collection rates? [[h3]]Three: does the answer change if we count the product left stuck in the pack? We built [[stages]]three stages to answer them: a meta-analysis, a recycling model, and an honest functional unit.`},
+ {id:'s4', name:'Stage 1', vo:`In stage one we screened [[f90]]ninety records and kept [[f24]]twenty-four reports. Instead of comparing averages across different studies, we only compared packs [[within]]inside the same study, where both used the same assumptions. That gave us [[f31]]thirty-one pairs from sixteen studies. The result: on average, the alternative had [[avg]]1.38 times the footprint of plastic. But it depends on the material. [[carton]]Cartons beat plastic in all nine pairs, at 0.63 times. [[reuse]]Reusable glass is close to a tie. [[glass]]Single-use glass is 2.6 times worse and [[alu]]aluminium is 2.5 times worse. Then a [[twist]]twist. When a study was paid for by a material maker, that material came out best in [[spons]]four of five studies. And values copied from an [[ind]]industry-compiled table looked twenty-six percent kinder to alternatives than the original papers.`},
+ {id:'s5', name:'Stage 2', vo:`Stage two moves to [[india]]India. We built a simulation of a beverage can, a PET bottle and a glass bottle, using Indian recycling rates: eighty-five percent for aluminium, seventy for PET. In [[eu]]Europe, an aluminium can has 1.73 times the footprint of PET. In [[inr]]India, that penalty shrinks to 1.16. Better, but still not a win. Aluminium only matches PET if about [[par]]eighty-nine percent of cans are collected, and India is at [[ind85]]eighty-five. So close, and yet not there. [[gl]]Glass stays about five times worse than PET at any collection rate.`},
+ {id:'s6', name:'Stage 3', vo:`Stage three is our favourite. Every packaging study we found counts a pack per kilogram of shampoo [[filled]]filled. But product that stays stuck inside the pack is [[waste]]wasted, and its carbon is wasted too. Using measured residue data from published studies, we scored four shampoo packs: a [[sachet]]sachet, a [[pump]]pump bottle, a [[pouch]]refill pouch and a [[can]]two-litre canister. When we charged each pack for the product it strands, [[up]]every footprint went up, by thirty-eight to one hundred twenty-one percent. The big canister, which [[tie]]tied with the refill pouch on the usual measure, [[lost]]lost by 1.4 times once leftovers were counted. And the sachet, usually the villain, turned out to be only partly worse than a pump bottle. [[pw]]Refill pouches won either way.`},
+ {id:'s7', name:'Conclusion', vo:`So what did we learn? Plastic replacement is not automatically greener. [[c1]]Cartons reliably win, reuse helps, and single-use glass and aluminium usually lose. In India, [[c2]]collection rates change the answer, especially for aluminium. And packaging should be judged [[c3]]per unit of product actually used, under local waste systems, with independent evidence. Next time someone says [[q]]“plastic-free,” ask: compared to what, where, and who paid for the study? [[thx]]Thank you.`}
+];
+
+const stage=document.getElementById('stage');
+SCENES.forEach(sc=>{ const sec=document.createElement('section'); sec.className='scene'; sec.id=sc.id; sec.innerHTML=BUILD[sc.id](); stage.insertBefore(sec,document.getElementById('subs')) });
+
+/* ---------------- Timeline construction (uses the real voice timings when voiceover.js is present) ---------------- */
+const LEAD = 0.8, TAIL = 1.0, TITLE_LEN = 5.5;
+SCENES[0].fixed = TITLE_LEN;
+SCENES[SCENES.length-1].tail = 3.4;           // room for the music to swell and fade after the last word
+let TOTAL = 0;
+const norm = w => w.toLowerCase().replace(/[^a-z0-9]/g,'');
+function alignWords(vod, wl){
+  const B = vod.words, subsB = B.map(b=>b[2].split(/\s+/).map(norm).filter(Boolean));
+  const st=[], en=[]; let j=0,k=0;
+  wl.forEach(()=>{
+    while(j<B.length && subsB[j].length===0) j++;
+    if(j>=B.length){ const l=en.length?en[en.length-1]:0; st.push(l); en.push(l+.25); return }
+    const n=subsB[j].length, t=B[j][0], d=B[j][1];
+    st.push(t+k/n*d); en.push(t+(k+1)/n*d);
+    if(++k>=n){ j++; k=0 }
+  });
+  return {st,en};
+}
+SCENES.forEach(sc=>{
+  const re=/\[\[(\w+)\]\]/g; let m,last=0,raw='';sc.marks={};
+  while((m=re.exec(sc.vo))){raw+=sc.vo.slice(last,m.index);sc.marks[m[1]]=raw.length;last=re.lastIndex}
+  raw+=sc.vo.slice(last); sc.plain=raw.replace(/\s+/g,' ').trim();
+  const wl=sc.plain?sc.plain.split(' '):[]; sc.words=wl.length;
+  sc.vod=(window.VO_DATA&&window.VO_DATA[sc.id])||null;
+  let st=[],en=[],audioDur=0;
+  if(sc.vod && sc.words){ ({st,en}=alignWords(sc.vod,wl)); audioDur=sc.vod.dur; }
+  else if(sc.words){ audioDur=sc.words/WPM*60; const L=sc.plain.length; let pos=0;
+    wl.forEach(w=>{ st.push(pos/L*audioDur); pos+=w.length+1; en.push(Math.min(pos,L)/L*audioDur) }); }
+  sc.audioDur=audioDur;
+  sc.dur=sc.fixed||(LEAD+audioDur+(sc.tail||TAIL));
+  sc.start=TOTAL; TOTAL+=sc.dur; sc.end=TOTAL;
+  sc.el=document.getElementById(sc.id);
+  sc.cue={start:0,x9:9999};
+  for(const k in sc.marks){
+    const wi=Math.min(raw.slice(0,sc.marks[k]).trim().split(/\s+/).filter(Boolean).length, st.length-1);
+    sc.cue[k]=Math.max(0.2,LEAD+(st[wi]||0)-0.12);
+  }
+  let sents=sc.plain?(sc.plain.match(/[^.?!:]+[.?!:]+["”]?\s*|[^.?!:]+$/g)||[sc.plain]):[];
+  let chunks=[];
+  sents.forEach(s=>{s=s.trim(); while(s.length>78){const mid=s.length/2; let cut=-1,best=1e9; for(let i=0;i<s.length;i++){ if(s[i]===' '){ const d=Math.abs(i-mid)-(s[i-1]===','?14:0); if(d<best){best=d;cut=i} } } chunks.push(s.slice(0,cut).trim()); s=s.slice(cut+1).trim()} if(s)chunks.push(s)});
+  let w0=0; sc.subs=chunks.map(c=>{const n=c.split(' ').length, w1=Math.min(w0+n-1,en.length-1); const o={a:LEAD+st[Math.min(w0,st.length-1)]-0.05,b:LEAD+en[w1]+0.1,t:c}; w0+=n; return o});
+  sc.subs.forEach((o,i)=>{ if(sc.subs[i+1]) o.b=Math.max(o.b,sc.subs[i+1].a-0.05) });
+});
+
+function parseT(sc,expr){
+  if(expr==null||expr==='')return null;
+  let m=expr.match(/^([a-z][\w]*)(?:([+-])([\d.]+))?$/i);
+  if(m){ const base=sc.cue[m[1]]; if(base==null){console.warn('unknown cue',expr,sc.id);return 0} return base+(m[2]==='-'?-1:1)*(m[3]?parseFloat(m[3]):0) }
+  return parseFloat(expr);
+}
+SCENES.forEach(sc=>{
+  sc.els=[...sc.el.querySelectorAll('[data-in],[data-alt],[data-alt2],[data-alt3],[data-alt4],[data-count-cue]')].map(el=>({
+    el, hasIn:el.dataset.in!==undefined, tin:parseT(sc,el.dataset.in), tout:parseT(sc,el.dataset.out),
+    talt:[el.dataset.alt,el.dataset.alt2,el.dataset.alt3,el.dataset.alt4].map(v=>parseT(sc,v)),
+    ccue:el.dataset.countCue?parseT(sc,el.dataset.countCue):null,
+    cto:parseFloat(el.dataset.countTo||0), cdur:parseFloat(el.dataset.countDur||1), cdec:parseInt(el.dataset.countDec||0),
+    cv:el.querySelector('.cv')
+  }));
+});
+
+/* ---------------- Rendering ---------------- */
+const $=id=>document.getElementById(id);
+const subs=$('subs'), subSpan=subs.querySelector('span');
+const ALTC=['alt','alt2','alt3','alt4'];
+function fmt(t){t=Math.max(0,t);return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')}
+function render(t){
+  t=Math.min(Math.max(t,0),TOTAL-0.001);
+  let idx=SCENES.findIndex(s=>t>=s.start&&t<s.end); if(idx<0)idx=SCENES.length-1;
+  SCENES.forEach((s,i)=>s.el.classList.toggle('active',i===idx));
+  const sc=SCENES[idx], lt=t-sc.start;
+  sc.els.forEach(o=>{
+    let on = o.tin==null? true : lt>=o.tin;
+    const gone = o.tout!=null && lt>=o.tout;
+    if(gone) on=false;
+    if(o.hasIn){ o.el.classList.toggle('in',on); o.el.classList.toggle('gone',gone&&o.tin!=null&&lt>=o.tin); }
+    o.talt.forEach((ta,i)=>{ if(ta!=null) o.el.classList.toggle(ALTC[i],lt>=ta) });
+    if(o.cv&&o.ccue!=null){ const p=Math.min(1,Math.max(0,(lt-o.ccue)/o.cdur)); const e=1-Math.pow(1-p,3); o.cv.textContent=(o.cto*e).toFixed(o.cdec) }
+  });
+  const sub=sc.subs.find(s=>lt>=s.a&&lt<s.b);
+  subSpan.textContent=sub?sub.t:''; subSpan.style.display=sub?'inline-block':'none';
+  $('bar').style.width=(t/TOTAL*100)+'%';
+  $('time').textContent=fmt(t)+' / '+fmt(TOTAL);
+  $('seek').value=Math.round(t/TOTAL*1000);
+  document.querySelectorAll('#scenebtns button').forEach((b,i)=>b.classList.toggle('on',i===idx));
+}
+
+/* ---------------- Audio: voice-over + music (Web Audio) ---------------- */
+let ACTX=null, MASTER=null, RECDEST=null, VBUF={}, MBUF=null, SRC=[], audioState='loading', aBase={ctx:0,clock:0};
+const setStatus=t=>{ $('astat').textContent=t };
+function mtof(n){ return 440*Math.pow(2,(n-69)/12) }
+
+function b64buf(b64){ const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u.buffer }
+/* music level over the timeline: loud for the title, low under the voice, swells after the last word */
+function musicLevel(t){
+  const last=SCENES[SCENES.length-1], vs=SCENES[1].start+LEAD-0.4, vEnd=last.start+LEAD+last.audioDur;
+  const pts=[[0,0],[1.8,.9],[vs-1.0,.9],[vs+0.9,.14],[vEnd,.14],[vEnd+1.4,.75],[TOTAL-1.6,.75],[TOTAL+1.2,0]];
+  return pts;
+}
+async function initAudio(){
+  try{
+    ACTX=new (window.AudioContext||window.webkitAudioContext)();
+    const comp=ACTX.createDynamicsCompressor(); comp.threshold.value=-22; comp.ratio.value=3; comp.attack.value=.01; comp.release.value=.25;
+    MASTER=ACTX.createGain(); MASTER.connect(comp); comp.connect(ACTX.destination);
+    RECDEST=ACTX.createMediaStreamDestination(); comp.connect(RECDEST);
+    setStatus('decoding voice…');
+    for(const sc of SCENES){ if(sc.vod) VBUF[sc.id]=await ACTX.decodeAudioData(b64buf(sc.vod.a)) }
+    setStatus('decoding music…');
+    if(window.MUSIC_DATA) MBUF=await ACTX.decodeAudioData(b64buf(window.MUSIC_DATA));
+    audioState='ready';
+    setStatus((Object.keys(VBUF).length?'♪ voice':'no voice (voiceover.js missing)')+' + '+(MBUF?'music ready':'no music (music.js missing)'));
+  }catch(e){ audioState='failed'; console.error(e); setStatus('audio unavailable'); }
+}
+function stopAudio(){ SRC.forEach(s=>{try{s.stop()}catch(e){}}); SRC=[] }
+function startAudio(){
+  stopAudio(); if(!ACTX||audioState!=='ready')return;
+  const now=ACTX.currentTime+0.08; aBase={ctx:now,clock};
+  if(MBUF && clock<MBUF.duration-0.05){
+    const s=ACTX.createBufferSource(), mg=ACTX.createGain(), pts=musicLevel();
+    let v0=0; for(let i=0;i<pts.length-1;i++){ if(clock>=pts[i][0]&&clock<=pts[i+1][0]) v0=pts[i][1]+(pts[i+1][1]-pts[i][1])*(clock-pts[i][0])/(pts[i+1][0]-pts[i][0]) }
+    mg.gain.setValueAtTime(v0,now); pts.forEach(([t,v])=>{ if(t>clock) mg.gain.linearRampToValueAtTime(v,now+(t-clock)) });
+    s.buffer=MBUF; s.connect(mg); mg.connect(MASTER); s.start(now,clock); SRC.push(s) }
+  SCENES.forEach(sc=>{
+    const b=VBUF[sc.id]; if(!b)return; const t0=sc.start+LEAD; if(t0+b.duration<=clock)return;
+    const s=ACTX.createBufferSource(), g=ACTX.createGain(); s.buffer=b; g.gain.value=1.25; s.connect(g); g.connect(MASTER);
+    s.start(now+Math.max(0,t0-clock),Math.max(0,clock-t0)); SRC.push(s);
+  });
+}
+
+/* ---------------- Clock ---------------- */
+let clock=0, playing=false, last=0;
+function tick(now){
+  if(playing){
+    if(SRC.length) clock=aBase.clock+Math.max(0,ACTX.currentTime-aBase.ctx); else clock+=(now-last)/1000;
+    last=now; if(clock>=TOTAL){clock=TOTAL-0.001;setPlaying(false)} render(clock)
+  }
+  requestAnimationFrame(tick)
+}
+function setPlaying(p){ playing=p; last=performance.now(); $('play').textContent=p?'❚❚ Pause':'▶ Play'; if(p)startAudio(); else stopAudio() }
+function seek(t){ clock=Math.min(Math.max(t,0),TOTAL-0.001); render(clock); if(playing)startAudio() }
+async function resumeAudio(){ if(ACTX&&ACTX.state!=='running'){ try{await ACTX.resume()}catch(e){} } }
+$('play').onclick=async()=>{ await resumeAudio(); if(clock>=TOTAL-0.01)seek(0); setPlaying(!playing) };
+$('seek').oninput=e=>seek(e.target.value/1000*TOTAL);
+SCENES.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent=i===0?'T':i; b.title=s.name; b.onclick=()=>seek(s.start+0.01); $('scenebtns').appendChild(b) });
+$('subbtn').onclick=()=>{ subs.classList.toggle('off'); $('subbtn').classList.toggle('on') };
+$('fs').onclick=()=>{ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen() };
+
+function curScene(){ return SCENES.findIndex(s=>clock>=s.start&&clock<s.end) }
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT')return;
+  if(e.code==='Space'){e.preventDefault();$('play').click()}
+  else if(e.key==='ArrowRight'){const i=curScene();seek(SCENES[Math.min(i+1,SCENES.length-1)].start+0.01)}
+  else if(e.key==='ArrowLeft'){const i=curScene();seek(SCENES[(clock-SCENES[i].start>2)?i:Math.max(0,i-1)].start+0.01)}
+  else if(e.key==='s'||e.key==='S')$('subbtn').click();
+  else if(e.key==='f'||e.key==='F')$('fs').click();
+  else if(e.key==='r'||e.key==='R')startRecord();
+  else if(e.key==='Escape')endRecord();
+});
+
+let cdTimer=null;
+async function startRecord(auto){
+  await resumeAudio();
+  setPlaying(false); seek(0); document.body.classList.add('rec'); fit();
+  const c=$('count'); c.style.display='flex'; let n=3; c.textContent=n;
+  clearInterval(cdTimer);
+  cdTimer=setInterval(()=>{ n--; if(n>0){c.textContent=n} else { clearInterval(cdTimer); c.style.display='none'; setPlaying(true) } },1000);
+}
+function endRecord(){ clearInterval(cdTimer); $('count').style.display='none'; document.body.classList.remove('rec'); setPlaying(false); fit() }
+$('rec').onclick=()=>startRecord();
+
+/* Export: records this browser tab (picture) + the mixed voice/music (sound) into a .webm file */
+$('exp').onclick=async()=>{
+  try{
+    if(audioState!=='ready'){ alert('Audio is still preparing – wait for "voice + music ready".'); return }
+    await resumeAudio();
+    const disp=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false,preferCurrentTab:true,selfBrowserSurface:'include'});
+    const mix=new MediaStream([...disp.getVideoTracks(),...RECDEST.stream.getAudioTracks()]);
+    const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+    const rec=new MediaRecorder(mix,{mimeType:mime,videoBitsPerSecond:9e6,audioBitsPerSecond:192000}), chunks=[];
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data) };
+    rec.onstop=()=>{ disp.getTracks().forEach(t=>t.stop()); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(chunks,{type:'video/webm'})); a.download='UNWRAP_video.webm'; document.body.appendChild(a); a.click(); a.remove(); endRecord() };
+    disp.getVideoTracks()[0].onended=()=>{ if(rec.state!=='inactive')rec.stop() };
+    rec.start(1000);
+    await startRecord();
+    const watch=setInterval(()=>{ if(clock>=TOTAL-0.05 && !playing){ clearInterval(watch); setTimeout(()=>{ if(rec.state!=='inactive')rec.stop() },700) } },300);
+  }catch(e){ console.warn(e); endRecord(); alert('Export was cancelled or is not supported in this browser. You can still use Record mode with a screen recorder.') }
+};
+function fit(){
+  const v=$('viewport'), w=v.clientWidth, h=v.clientHeight, s=Math.min(w/1280,h/720);
+  const st=$('stage'); st.style.transform=`scale(${s})`; st.style.left=((w-1280*s)/2)+'px'; st.style.top=((h-720*s)/2)+'px';
+}
+window.addEventListener('resize',fit); fit();
+
+render(0); requestAnimationFrame(t=>{last=t;tick(t)}); initAudio();
+document.title='UNWRAP Video ('+fmt(TOTAL)+')';
+</script>
+</body>
+</html>

@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UNWRAP Video</title>
+<style>
+:root{
+  --bg:#0b1626; --bg2:#10243d; --card:#14263d; --card2:#1b3453; --ink:#eef3fa; --mute:#8fa5c2;
+  --green:#34d399; --red:#fb7185; --amber:#fbbf24; --blue:#60a5fa; --purple:#a78bfa; --grey:#94a3b8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#050b14;color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+#wrap{position:absolute;inset:0;display:flex;flex-direction:column}
+#viewport{flex:1;position:relative;overflow:hidden}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:radial-gradient(1200px 700px at 30% 20%,var(--bg2),var(--bg));overflow:hidden}
+
+/* ambient background motion */
+.blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.25;animation:float 18s ease-in-out infinite alternate}
+.b1{width:420px;height:420px;background:#10b981;left:-100px;top:380px}
+.b2{width:360px;height:360px;background:#3b82f6;right:-80px;top:-60px;animation-duration:23s}
+.b3{width:300px;height:300px;background:#a78bfa;left:520px;top:520px;animation-duration:27s;opacity:.15}
+@keyframes float{from{transform:translate(0,0) scale(1)}to{transform:translate(60px,-40px) scale(1.2)}}
+
+/* scenes */
+.scene{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .5s,visibility .5s}
+.scene.active{opacity:1;visibility:visible}
+.scene .inner{position:absolute;inset:0}
+.scene.active .inner{animation:drift 60s linear forwards}
+@keyframes drift{from{transform:scale(1)}to{transform:scale(1.035)}}
+
+.el{position:absolute;opacity:0;transform:translateY(26px) scale(.96);transition:opacity .6s,transform .6s cubic-bezier(.2,.9,.3,1.2),width 1s cubic-bezier(.2,.8,.2,1),height 1s cubic-bezier(.2,.8,.2,1),background .5s,color .5s,border-color .5s}
+.el.in{opacity:1;transform:none}
+.el.fl{transform:translateX(-80px)} .el.fl.in{transform:none}
+.el.fr{transform:translateX(80px)}  .el.fr.in{transform:none}
+.el.pop{transform:scale(.3)} .el.pop.in{transform:none}
+.el.nb,.el.nb.in{transform:none}
+.el.ctr{transform-origin:center}
+
+.kick{left:60px;top:34px;font-size:18px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);font-weight:700}
+.h1{font-weight:800;line-height:1.1}
+.center{text-align:center}
+.card{background:var(--card);border:2px solid #25415f;border-radius:20px;padding:22px}
+.pill{display:inline-block;border-radius:999px;padding:6px 16px;font-weight:700;font-size:20px}
+.mute{color:var(--mute)}
+.green{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)} .blue{color:var(--blue)} .purple{color:var(--purple)}
+
+svg.ic{width:100%;height:100%;display:block;overflow:visible}
+.ic-wrap{position:absolute}
+
+/* dots */
+.dot{width:46px;height:46px;border-radius:50%;background:#2a4263;border:3px solid #3a5a82}
+.dot.alt.w{background:var(--green);border-color:#a7f3d0;box-shadow:0 0 18px var(--green)}
+.dot.alt.l{background:#3b2230;border-color:#7f3a4c;opacity:.7}
+
+/* bars */
+.hb{height:46px;width:0;border-radius:0 10px 10px 0}
+.hb.in{width:var(--w)}
+.vb{width:46px;height:0;border-radius:10px 10px 0 0}
+.vb.in{height:var(--h)}
+.vb.alt.in{height:var(--h2,var(--h))}
+.lbl{font-size:24px;font-weight:700}
+
+/* strike */
+.strike{position:relative}
+.strike::after{content:"";position:absolute;left:-6px;right:-6px;top:50%;height:5px;background:var(--red);border-radius:3px;transform:scaleX(0);transform-origin:left;transition:transform .5s .4s}
+.strike.in::after{transform:scaleX(1)}
+
+.pulse.in{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.shake.in{animation:shake .6s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-10px) rotate(-3deg)}40%{transform:translateX(10px) rotate(3deg)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.stamp{font-size:64px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);border:6px solid var(--amber);border-radius:14px;padding:6px 26px;transform:rotate(-8deg) scale(2.2)}
+.stamp.in{transform:rotate(-8deg) scale(1);}
+
+.swap .a{display:inline} .swap .b{display:none}
+.swap.alt .a{display:none} .swap.alt .b{display:inline}
+
+/* subtitles */
+#subs{position:absolute;left:0;right:0;bottom:38px;text-align:center;padding:0 90px;z-index:50;pointer-events:none}
+#subs span{display:inline-block;background:rgba(5,11,20,.78);padding:8px 22px;border-radius:12px;font-size:30px;line-height:1.3;font-weight:600;max-width:1100px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+#subs.off{display:none}
+#bar{position:absolute;left:0;bottom:0;height:6px;background:var(--green);width:0;z-index:60}
+#count{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:260px;font-weight:900;background:rgba(5,11,20,.85);z-index:100}
+
+/* controls */
+#ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:#0a121f;border-top:1px solid #1d2b40;font-size:14px}
+#ctl button,#ctl select{background:#1b2b44;color:var(--ink);border:1px solid #2b4366;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+#ctl button:hover{background:#24395b}
+#ctl button.on{background:var(--green);color:#052;border-color:var(--green);font-weight:700}
+#seek{flex:1;min-width:200px}
+.rec #ctl{display:none}
+#hint{color:var(--mute);font-size:12px;width:100%}
+</style>
+</head>
+<body>
+<!-- icon symbols -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-plastic" viewBox="0 0 100 160"><path fill="currentColor" d="M40 10h20v14l-2 6c14 8 22 20 22 40v76c0 8-6 12-14 12H34c-8 0-14-4-14-12V70c0-20 8-32 22-40l-2-6z"/><rect x="37" y="2" width="26" height="12" rx="3" fill="#fff" opacity=".55"/><path fill="#fff" opacity=".22" d="M30 70c0-10 4-18 10-24v100c-6 0-10-2-10-8z"/></symbol>
+    <symbol id="i-glass" viewBox="0 0 100 160"><path fill="currentColor" d="M42 6h16v48c0 10 22 20 22 46v46c0 8-6 12-14 12H34c-8 0-14-4-14-12v-46c0-26 22-36 22-46z"/><rect x="40" y="2" width="20" height="8" rx="2" fill="#fff" opacity=".5"/><path fill="#fff" opacity=".28" d="M30 104c0-14 6-22 10-28v70c-6 0-10-2-10-8z"/></symbol>
+    <symbol id="i-can" viewBox="0 0 100 160"><rect x="24" y="22" width="52" height="124" rx="9" fill="currentColor"/><rect x="28" y="12" width="44" height="14" rx="5" fill="#fff" opacity=".5"/><rect x="28" y="140" width="44" height="12" rx="5" fill="#fff" opacity=".3"/><path fill="#fff" opacity=".25" d="M32 34h8v100h-8z"/></symbol>
+    <symbol id="i-carton" viewBox="0 0 100 160"><path fill="currentColor" d="M24 54L50 22l26 32v94H24z"/><rect x="44" y="6" width="12" height="18" fill="currentColor"/><rect x="40" y="4" width="20" height="6" fill="#fff" opacity=".5"/><path fill="#fff" opacity=".25" d="M24 54h26v94H24z"/></symbol>
+    <symbol id="i-pouch" viewBox="0 0 100 160"><path fill="currentColor" d="M24 46h52l6 98c0 6-4 10-10 10H28c-6 0-10-4-10-10z"/><rect x="41" y="14" width="18" height="34" rx="3" fill="currentColor"/><rect x="38" y="8" width="24" height="10" rx="3" fill="#fff" opacity=".55"/><path fill="#fff" opacity=".22" d="M30 56h10v88H30z"/></symbol>
+    <symbol id="i-sachet" viewBox="0 0 100 160"><rect x="22" y="56" width="56" height="86" rx="3" fill="currentColor"/><path d="M22 62h56M22 136h56" stroke="#fff" stroke-width="5" stroke-dasharray="4 3" opacity=".6"/><path fill="#fff" opacity=".22" d="M30 72h10v52H30z"/></symbol>
+    <symbol id="i-pump" viewBox="0 0 100 160"><rect x="24" y="58" width="52" height="92" rx="12" fill="currentColor"/><rect x="42" y="40" width="16" height="20" fill="currentColor"/><rect x="30" y="20" width="44" height="12" rx="5" fill="currentColor"/><rect x="46" y="28" width="8" height="14" fill="currentColor"/><path fill="#fff" opacity=".22" d="M32 70h9v70h-9z"/></symbol>
+    <symbol id="i-can2" viewBox="0 0 100 160"><path fill="currentColor" d="M20 64c0-9 6-16 15-16h30c9 0 15 7 15 16v80c0 8-6 12-14 12H34c-8 0-14-4-14-12z"/><rect x="34" y="28" width="26" height="22" rx="3" fill="currentColor"/><rect x="32" y="22" width="30" height="9" rx="3" fill="#fff" opacity=".55"/><path d="M78 70h8c6 0 8 4 8 10v34c0 6-2 10-8 10h-8" fill="none" stroke="currentColor" stroke-width="8"/><path fill="#fff" opacity=".22" d="M28 70h9v76h-9z"/></symbol>
+  </defs>
+</svg>
+
+<div id="wrap">
+<div id="viewport">
+<div id="stage">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+  <!-- ================= SCENE 1: HOOK ================= -->
+  <section class="scene" id="s1"><div class="inner">
+    <div class="el kick" data-in="0.3">The hook</div>
+
+    <div class="el fl ic-wrap" style="left:300px;top:130px;width:150px;height:330px;color:#7dd3fc" data-in="bottles" data-out="n31"><svg class="ic"><use href="#i-plastic"/></svg></div>
+    <div class="el fl center" style="left:250px;top:470px;width:250px;font-size:30px;font-weight:800;color:#7dd3fc" data-in="bottles+0.2" data-out="n31">PLASTIC</div>
+    <div class="el pop center" style="left:590px;top:270px;width:100px;font-size:44px;font-weight:900;color:var(--mute)" data-in="bottles+0.5" data-out="n31">vs</div>
+    <div class="el fr ic-wrap" style="left:830px;top:130px;width:150px;height:330px;color:#6ee7b7" data-in="bottles+0.7" data-out="n31"><svg class="ic"><use href="#i-glass"/></svg></div>
+    <div class="el fr center" style="left:780px;top:470px;width:250px;font-size:30px;font-weight:800;color:#6ee7b7" data-in="bottles+0.9" data-out="n31">GLASS</div>
+    <div class="el pop" style="left:960px;top:110px;width:96px;height:96px;border-radius:50%;background:var(--green);color:#052e1b;font-size:64px;font-weight:900;text-align:center;line-height:96px;box-shadow:0 0 40px var(--green)" data-in="glass" data-out="n31">✓</div>
+    <div class="el center" style="left:290px;top:530px;width:700px;font-size:28px;color:var(--mute)" data-in="bottles+1.2" data-out="n31">“Which is better for the planet?”</div>
+
+    <div class="el center h1" style="left:240px;top:60px;width:800px;font-size:54px" data-in="n31" data-count-cue="n31" data-count-to="31" data-count-dur="2.2"><span class="cv amber">0</span> real comparisons</div>
+    <div id="dots1"></div>
+    <div class="el center h1" style="left:240px;top:442px;width:800px;font-size:44px" data-in="n13"><span class="green">13</span> of 31 beat plastic</div>
+    <div class="el center h1 pulse" style="left:140px;top:520px;width:1000px;font-size:46px" data-in="q">“Plastic-free” = greener<span class="amber">?</span></div>
+  </div></section>
+
+  <!-- ================= SCENE 2: PROBLEM ================= -->
+  <section class="scene" id="s2"><div class="inner">
+    <div class="el kick" data-in="0.3">The problem</div>
+    <div class="el fl ic-wrap" style="left:70px;top:150px;width:110px;height:240px;color:#7dd3fc" data-in="0.8" data-out="probs"><svg class="ic"><use href="#i-plastic"/></svg></div>
+    <div class="el center lbl" style="left:40px;top:400px;width:170px;color:#7dd3fc" data-in="0.9" data-out="probs">PLASTIC</div>
+    <div class="el center" style="left:215px;top:240px;width:90px;font-size:56px;color:var(--mute)" data-in="m1-0.6" data-out="probs">➜</div>
+    <div class="el pop ic-wrap" style="left:340px;top:170px;width:110px;height:220px;color:#6ee7b7" data-in="m1" data-out="probs"><svg class="ic"><use href="#i-glass"/></svg></div>
+    <div class="el center lbl" style="left:310px;top:400px;width:170px" data-in="m1" data-out="probs">Glass</div>
+    <div class="el pop ic-wrap" style="left:560px;top:170px;width:110px;height:220px;color:#cbd5e1" data-in="m2" data-out="probs"><svg class="ic"><use href="#i-can"/></svg></div>
+    <div class="el center lbl" style="left:530px;top:400px;width:170px" data-in="m2" data-out="probs">Aluminium</div>
+    <div class="el pop ic-wrap" style="left:780px;top:170px;width:110px;height:220px;color:#fcd34d" data-in="m3" data-out="probs"><svg class="ic"><use href="#i-carton"/></svg></div>
+    <div class="el center lbl" style="left:750px;top:400px;width:170px" data-in="m3" data-out="probs">Cartons</div>
+    <div class="el pop ic-wrap" style="left:1000px;top:170px;width:110px;height:220px;color:#c4b5fd" data-in="m4" data-out="probs"><svg class="ic"><use href="#i-pouch"/></svg></div>
+    <div class="el center lbl" style="left:970px;top:400px;width:170px" data-in="m4" data-out="probs">Refills</div>
+    <div class="el center mute" style="left:140px;top:500px;width:1000px;font-size:30px" data-in="m4+1.6" data-out="probs">The carbon case comes from life cycle assessments (LCAs)</div>
+
+    <!-- three problems (everything above fades out at 'probs') -->
+    <div class="el center h1" style="left:240px;top:60px;width:800px;font-size:46px" data-in="probs">Three problems with the evidence</div>
+    <div class="el card fl center" style="left:50px;top:170px;width:380px;height:370px" data-in="p1">
+      <div class="red" style="font-size:90px;font-weight:900;line-height:1">1</div>
+      <div style="font-size:34px;font-weight:800;margin:6px 0 18px">They disagree</div>
+      <div style="font-size:60px">⬆️ ⬇️</div>
+      <div class="mute" style="font-size:22px;margin-top:14px">One study says carton wins, another says glass</div>
+    </div>
+    <div class="el card center" style="left:450px;top:170px;width:380px;height:370px" data-in="p2">
+      <div class="amber" style="font-size:90px;font-weight:900;line-height:1">2</div>
+      <div style="font-size:34px;font-weight:800;margin:6px 0 14px">Europe-shaped</div>
+      <div style="display:flex;justify-content:space-around;font-size:22px;margin-top:6px">
+        <div><div style="font-size:54px">♻️</div><b>Europe</b><br><span class="mute">mostly recycled</span></div>
+        <div><div style="font-size:54px">🔥</div><b>India</b><br><span class="mute">waste often<br>never collected</span></div>
+      </div>
+    </div>
+    <div class="el card fr center" style="left:850px;top:170px;width:380px;height:370px" data-in="p3">
+      <div class="blue" style="font-size:90px;font-weight:900;line-height:1">3</div>
+      <div style="font-size:34px;font-weight:800;margin:6px 0 10px">Filled, not used</div>
+      <div style="position:relative;height:130px;width:80px;margin:0 auto;color:#7dd3fc"><svg class="ic" style="position:absolute;inset:0"><use href="#i-pump"/></svg><div style="position:absolute;left:12px;right:12px;bottom:6px;height:22px;background:var(--amber);border-radius:4px;opacity:.9"></div></div>
+      <div class="mute" style="font-size:22px;margin-top:10px">Product stuck in the pack is invisible</div>
+    </div>
+  </div></section>
+
+  <!-- ================= SCENE 3: APPROACH ================= -->
+  <section class="scene" id="s3"><div class="inner">
+    <div class="el kick" data-in="0.3">Our approach</div>
+    <div class="el center h1" style="left:240px;top:70px;width:800px;font-size:48px" data-in="0.5">Three questions</div>
+
+    <div class="el card fl" style="left:50px;top:170px;width:380px;height:240px" data-in="h1">
+      <div class="green" style="font-size:20px;font-weight:800;letter-spacing:.1em">H1</div>
+      <div style="font-size:30px;font-weight:700;line-height:1.25;margin-top:8px">Is the replacement lower in carbon than the plastic it replaces?</div>
+    </div>
+    <div class="el card" style="left:450px;top:170px;width:380px;height:240px" data-in="h2">
+      <div class="amber" style="font-size:20px;font-weight:800;letter-spacing:.1em">H2</div>
+      <div style="font-size:30px;font-weight:700;line-height:1.25;margin-top:8px">Does that change under <span class="amber">Indian</span> collection rates?</div>
+    </div>
+    <div class="el card fr" style="left:850px;top:170px;width:380px;height:240px" data-in="h3">
+      <div class="purple" style="font-size:20px;font-weight:800;letter-spacing:.1em">H3</div>
+      <div style="font-size:30px;font-weight:700;line-height:1.25;margin-top:8px">Does it change if we count the product <span class="purple">left stuck</span> in the pack?</div>
+    </div>
+
+    <div class="el center" style="left:240px;top:430px;width:800px;font-size:26px;color:var(--mute);letter-spacing:.1em" data-in="stages">▼ &nbsp;THREE STAGES&nbsp; ▼</div>
+    <div class="el card pop center" style="left:50px;top:480px;width:360px;height:96px;padding-top:14px;border-color:var(--green)" data-in="stages+0.3"><b class="green">STAGE 1</b><br><span style="font-size:24px;font-weight:700">Meta-analysis</span></div>
+    <div class="el center" style="left:415px;top:500px;width:40px;font-size:40px;color:var(--mute)" data-in="stages+0.6">➜</div>
+    <div class="el card pop center" style="left:460px;top:480px;width:360px;height:96px;padding-top:14px;border-color:var(--amber)" data-in="stages+0.9"><b class="amber">STAGE 2</b><br><span style="font-size:24px;font-weight:700">Recycling model</span></div>
+    <div class="el center" style="left:825px;top:500px;width:40px;font-size:40px;color:var(--mute)" data-in="stages+1.2">➜</div>
+    <div class="el card pop center" style="left:870px;top:480px;width:360px;height:96px;padding-top:14px;border-color:var(--purple)" data-in="stages+1.5"><b class="purple">STAGE 3</b><br><span style="font-size:24px;font-weight:700">Honest functional unit</span></div>
+  </div></section>
+
+  <!-- ================= SCENE 4: STAGE 1 ================= -->
+  <section class="scene" id="s4"><div class="inner">
+    <div class="el kick" data-in="0.3">Stage 1 · Paired meta-analysis</div>
+
+    <!-- panel A: funnel + within-study -->
+    <div class="el card center" style="left:60px;top:110px;width:330px;height:170px" data-in="f90" data-out="avg">
+      <div class="h1 amber" style="font-size:78px" data-count-cue="f90" data-count-to="90" data-count-dur="1.6"><span class="cv">0</span></div><div style="font-size:24px;font-weight:700">records screened</div></div>
+    <div class="el center" style="left:395px;top:170px;width:60px;font-size:50px;color:var(--mute)" data-in="f90+1.5" data-out="avg">➜</div>
+    <div class="el card center" style="left:475px;top:110px;width:330px;height:170px" data-in="f24" data-out="avg">
+      <div class="h1 blue" style="font-size:78px" data-count-cue="f24" data-count-to="24" data-count-dur="1.4"><span class="cv">0</span></div><div style="font-size:24px;font-weight:700">reports kept</div></div>
+    <div class="el center" style="left:810px;top:170px;width:60px;font-size:50px;color:var(--mute)" data-in="f31-2" data-out="avg">➜</div>
+    <div class="el card center" style="left:890px;top:110px;width:330px;height:170px;border-color:var(--green)" data-in="f31" data-out="avg">
+      <div class="h1 green" style="font-size:78px" data-count-cue="f31" data-count-to="31" data-count-dur="1.4"><span class="cv">0</span></div><div style="font-size:24px;font-weight:700">pairs · 16 studies</div></div>
+
+    <div class="el card fl center" style="left:60px;top:330px;width:550px;height:200px" data-in="within-1.5" data-out="avg">
+      <div class="strike" style="display:inline-block;font-size:30px;font-weight:700;margin-top:14px" data-in="within">Averages across different studies</div>
+      <div class="mute" style="font-size:22px;margin-top:16px">different databases, boundaries, assumptions</div>
+      <div class="red" style="font-size:44px;margin-top:8px">✗</div>
+    </div>
+    <div class="el card fr center" style="left:670px;top:330px;width:550px;height:200px;border-color:var(--green)" data-in="within" data-out="avg">
+      <div style="font-size:30px;font-weight:700;margin-top:14px" class="green">Pairs inside the same study</div>
+      <div style="display:flex;justify-content:center;gap:22px;margin-top:10px;height:80px"><div style="width:44px;color:#7dd3fc"><svg class="ic"><use href="#i-plastic"/></svg></div><div style="font-size:30px;color:var(--mute);align-self:center">vs</div><div style="width:44px;color:#fcd34d"><svg class="ic"><use href="#i-carton"/></svg></div></div>
+      <div class="mute" style="font-size:22px;margin-top:6px">same rules for both packs ✓</div>
+    </div>
+
+    <!-- panel B: bar chart -->
+    <div class="el h1" style="left:60px;top:80px;width:1100px;font-size:30px" data-in="avg" data-out="twist">Footprint of alternative ÷ plastic <span class="mute" style="font-size:22px;font-weight:600">(1.0 = same · lower is better)</span></div>
+    <div class="el nb" style="left:460px;top:135px;width:3px;height:400px;background:repeating-linear-gradient(var(--mute) 0 8px,transparent 8px 14px)" data-in="avg" data-out="twist"></div>
+    <div class="el mute" style="left:466px;top:540px;font-size:20px" data-in="avg" data-out="twist">1.0 = same as plastic</div>
+
+    <div class="el lbl" style="left:50px;top:150px;width:230px;text-align:right" data-in="avg" data-out="twist">All alternatives</div>
+    <div class="el hb nb" style="left:300px;top:150px;--w:221px;background:var(--amber)" data-in="avg" data-out="twist"></div>
+    <div class="el lbl amber" style="left:540px;top:152px" data-in="avg+0.5" data-out="twist" data-count-cue="avg" data-count-to="1.38" data-count-dur="1.2" data-count-dec="2"><span class="cv">0.00</span>×</div>
+
+    <div class="el lbl" style="left:50px;top:230px;width:230px;text-align:right" data-in="carton" data-out="twist">Cartons</div>
+    <div class="el hb nb" style="left:300px;top:230px;--w:101px;background:var(--green)" data-in="carton" data-out="twist"></div>
+    <div class="el lbl green" style="left:420px;top:232px;white-space:nowrap" data-in="carton+0.5" data-out="twist">0.63× <span style="font-size:20px;font-weight:600">· better in 9 of 9 pairs</span></div>
+
+    <div class="el lbl" style="left:50px;top:310px;width:230px;text-align:right" data-in="reuse" data-out="twist">Reusable glass</div>
+    <div class="el hb nb" style="left:300px;top:310px;--w:146px;background:#86efac" data-in="reuse" data-out="twist"></div>
+    <div class="el lbl" style="left:466px;top:312px;color:#bbf7d0" data-in="reuse+0.5" data-out="twist">0.91× <span style="font-size:20px;font-weight:600">· near tie</span></div>
+
+    <div class="el lbl" style="left:50px;top:390px;width:230px;text-align:right" data-in="glass" data-out="twist">Single-use glass</div>
+    <div class="el hb nb" style="left:300px;top:390px;--w:413px;background:var(--red)" data-in="glass" data-out="twist"></div>
+    <div class="el lbl red" style="left:733px;top:392px" data-in="glass+0.5" data-out="twist">2.58×</div>
+
+    <div class="el lbl" style="left:50px;top:470px;width:230px;text-align:right" data-in="alu" data-out="twist">Aluminium can</div>
+    <div class="el hb nb" style="left:300px;top:470px;--w:392px;background:var(--red)" data-in="alu" data-out="twist"></div>
+    <div class="el lbl red" style="left:712px;top:472px" data-in="alu+0.5" data-out="twist">2.45×</div>
+
+    <!-- panel C: twist -->
+    <div class="el stamp" style="left:60px;top:90px" data-in="twist">Plot twist</div>
+    <div class="el card fl center" style="left:60px;top:230px;width:570px;height:300px;border-color:var(--amber)" data-in="spons">
+      <div style="font-size:34px;font-weight:800;margin-top:6px">Who paid for the study?</div>
+      <div style="font-size:60px;margin:10px 0 0">💰</div>
+      <div style="display:flex;justify-content:center;gap:14px;margin:14px 0">
+        <div class="el pop" style="position:relative;width:40px;height:40px;border-radius:50%;background:var(--amber)" data-in="spons+0.4"></div>
+        <div class="el pop" style="position:relative;width:40px;height:40px;border-radius:50%;background:var(--amber)" data-in="spons+0.8"></div>
+        <div class="el pop" style="position:relative;width:40px;height:40px;border-radius:50%;background:var(--amber)" data-in="spons+1.2"></div>
+        <div class="el pop" style="position:relative;width:40px;height:40px;border-radius:50%;background:var(--amber)" data-in="spons+1.6"></div>
+        <div class="el pop" style="position:relative;width:40px;height:40px;border-radius:50%;background:#2a4263;border:3px solid #3a5a82" data-in="spons+2.0"></div>
+      </div>
+      <div style="font-size:26px"><b class="amber">4 of 5</b> sponsored studies: the sponsor’s material ranked best</div>
+    </div>
+    <div class="el card fr center" style="left:650px;top:230px;width:570px;height:300px;border-color:var(--blue)" data-in="ind">
+      <div style="font-size:30px;font-weight:800;margin-top:6px">Industry-compiled table</div>
+      <div class="h1 blue" style="font-size:110px;line-height:1.1" data-count-cue="ind" data-count-to="26" data-count-dur="1.4"><span class="cv">0</span>%</div>
+      <div style="font-size:26px">kinder to alternatives than the original papers</div>
+    </div>
+  </div></section>
+
+  <!-- ================= SCENE 5: STAGE 2 ================= -->
+  <section class="scene" id="s5"><div class="inner">
+    <div class="el kick" data-in="0.3">Stage 2 · Indian collection rates</div>
+
+    <div class="el card" style="left:690px;top:90px;width:520px;height:150px" data-in="india">
+      <div class="amber" style="font-size:22px;font-weight:800;margin-bottom:8px">🇮🇳 INDIA · collected for recycling</div>
+      <div style="display:flex;gap:26px;font-size:26px;font-weight:700"><span>Aluminium <span class="green">85%</span></span><span>PET <span class="blue">70%</span></span><span>Glass <span class="red">60%</span></span></div>
+    </div>
+
+    <!-- chart -->
+    <div class="el h1 swap" style="left:60px;top:84px;width:600px;font-size:30px" data-in="eu" data-alt="inr">Footprint per litre <span class="mute" style="font-size:22px;font-weight:600">(PET = 1)</span></div>
+    <div class="el pill swap" style="left:60px;top:132px;background:#1e3a8a;color:#bfdbfe" data-in="eu" data-alt="inr"><span class="a">EUROPEAN rates</span><span class="b" style="color:#fde68a">INDIAN rates</span></div>
+    <div class="el nb" style="left:60px;top:560px;width:600px;height:3px;background:#3a5a82" data-in="eu"></div>
+
+    <div class="el vb nb" style="left:120px;bottom:160px;width:110px;--h:70px;background:#7dd3fc" data-in="eu"></div>
+    <div class="el lbl center" style="left:100px;top:575px;width:150px;color:#7dd3fc" data-in="eu">PET 1.0</div>
+
+    <div class="el vb nb swap" id="alu-bar" style="left:300px;bottom:160px;width:110px;--h:121px;--h2:81px;background:#cbd5e1" data-in="eu" data-alt="inr"></div>
+    <div class="el lbl center swap" style="left:280px;top:575px;width:150px;color:#e2e8f0" data-in="eu" data-alt="inr">Al <span class="a">1.73×</span><span class="b green">1.16×</span></div>
+    <div class="el center swap" style="left:270px;top:405px;width:170px;font-size:30px;font-weight:900" data-in="inr+0.8" data-alt="inr+99">⬇ penalty shrinks</div>
+
+    <div class="el vb nb" style="left:480px;bottom:160px;width:110px;--h:371px;background:var(--red)" data-in="gl"></div>
+    <div class="el lbl center" style="left:460px;top:575px;width:150px;color:var(--red)" data-in="gl">Glass ≈5×</div>
+
+    <!-- slider -->
+    <div class="el" style="left:700px;top:320px;width:500px;font-size:24px;font-weight:700" data-in="par">Aluminium can collection rate</div>
+    <div class="el nb" style="left:700px;top:420px;width:500px;height:14px;border-radius:7px;background:linear-gradient(90deg,#be123c,#f59e0b 60%,#34d399)" data-in="par"></div>
+    <div class="el mute" style="left:690px;top:442px;font-size:18px" data-in="par">0%</div>
+    <div class="el mute" style="left:1170px;top:442px;font-size:18px" data-in="par">100%</div>
+    <div class="el center" style="left:1070px;top:340px;width:150px;font-size:20px;font-weight:800;color:var(--green)" data-in="par+0.4">PARITY ≈ 89%</div>
+    <div class="el nb" style="left:1145px;top:370px;width:4px;height:70px;background:var(--green)" data-in="par+0.4"></div>
+    <div class="el pop nb" style="left:1149px;top:368px;font-size:32px" data-in="par+0.4">🏁</div>
+    <div class="el center" style="left:1010px;top:470px;width:150px;font-size:20px;font-weight:800;color:var(--amber)" data-in="ind85">INDIA 85%</div>
+    <div class="el nb" style="left:1123px;top:408px;width:4px;height:60px;background:var(--amber)" data-in="ind85"></div>
+    <div class="el nb pop" style="left:1111px;top:394px;width:28px;height:28px;border-radius:50%;background:var(--amber);box-shadow:0 0 20px var(--amber)" data-in="ind85"></div>
+    <div class="el center pill" style="left:760px;top:520px;width:440px;background:#3b2230;color:#fecdd3;font-size:26px" data-in="ind85+1.4">So close… ~4 points short</div>
+  </div></section>
+
+  <!-- ================= SCENE 6: STAGE 3 ================= -->
+  <section class="scene" id="s6"><div class="inner">
+    <div class="el kick" data-in="0.3">Stage 3 · The honest functional unit</div>
+
+    <div class="el card center" style="left:60px;top:80px;width:520px;height:64px;padding:12px" data-in="filled" data-out="up"><span style="font-size:24px;font-weight:800">Usual unit: per kg <span class="blue">filled</span></span></div>
+    <div class="el card center" style="left:700px;top:80px;width:520px;height:64px;padding:12px;border-color:var(--amber)" data-in="waste" data-out="up"><span style="font-size:24px;font-weight:800">Stuck product = <span class="amber">wasted carbon</span> 💧</span></div>
+
+    <div class="el pop ic-wrap" style="left:170px;top:210px;width:100px;height:200px;color:#c4b5fd" data-in="sachet" data-out="up"><svg class="ic"><use href="#i-sachet"/></svg></div>
+    <div class="el center lbl" style="left:105px;top:420px;width:230px" data-in="sachet" data-out="up">Sachet 6 mL</div>
+    <div class="el center pill" style="left:125px;top:470px;width:190px;background:#4a3515;color:var(--amber);font-size:18px" data-in="sachet+1.4" data-out="up">3–11% stranded</div>
+
+    <div class="el pop ic-wrap" style="left:450px;top:210px;width:100px;height:200px;color:#7dd3fc" data-in="pump" data-out="up"><svg class="ic"><use href="#i-pump"/></svg></div>
+    <div class="el center lbl" style="left:385px;top:420px;width:230px" data-in="pump" data-out="up">Pump 200 mL</div>
+    <div class="el center pill" style="left:405px;top:470px;width:190px;background:#4a3515;color:var(--amber);font-size:18px" data-in="pump+1.0" data-out="up">7.1% stranded</div>
+
+    <div class="el pop ic-wrap" style="left:730px;top:210px;width:100px;height:200px;color:#6ee7b7" data-in="pouch" data-out="up"><svg class="ic"><use href="#i-pouch"/></svg></div>
+    <div class="el center lbl" style="left:665px;top:420px;width:230px" data-in="pouch" data-out="up">Refill pouch 500 mL</div>
+    <div class="el center pill" style="left:685px;top:470px;width:190px;background:#4a3515;color:var(--amber);font-size:18px" data-in="pouch+1.2" data-out="up">2.7% stranded</div>
+
+    <div class="el pop ic-wrap" style="left:1010px;top:210px;width:100px;height:200px;color:#fca5a5" data-in="can" data-out="up"><svg class="ic"><use href="#i-can2"/></svg></div>
+    <div class="el center lbl" style="left:945px;top:420px;width:230px" data-in="can" data-out="up">Canister 2 L</div>
+    <div class="el center pill" style="left:965px;top:470px;width:190px;background:#4a3515;color:var(--amber);font-size:18px" data-in="can+1.2" data-out="up">3.2% + unused</div>
+
+    <!-- bars -->
+    <div class="el h1" style="left:60px;top:76px;width:1000px;font-size:28px" data-in="up" data-out="tie">kg CO₂e per kg of shampoo <span class="mute" style="font-size:20px;font-weight:600"> · <span style="color:var(--grey)">■</span> per kg filled &nbsp; <span class="purple">■</span> per kg used</span></div>
+    <div class="el nb" style="left:60px;top:545px;width:1160px;height:3px;background:#3a5a82" data-in="up" data-out="tie"></div>
+
+    <div class="el vb nb" style="left:175px;bottom:175px;width:56px;--h:186px;background:var(--grey)" data-in="up" data-out="tie"></div>
+    <div class="el vb nb" style="left:239px;bottom:175px;width:56px;--h:261px;background:var(--purple)" data-in="up+0.4" data-out="tie"></div>
+    <div class="el lbl center" style="left:150px;top:560px;width:170px" data-in="up" data-out="tie">Sachet</div>
+
+    <div class="el vb nb" style="left:455px;bottom:175px;width:56px;--h:150px;background:var(--grey)" data-in="up+0.5" data-out="tie"></div>
+    <div class="el vb nb" style="left:519px;bottom:175px;width:56px;--h:225px;background:var(--purple)" data-in="up+0.9" data-out="tie"></div>
+    <div class="el lbl center" style="left:430px;top:560px;width:170px" data-in="up+0.5" data-out="tie">Pump</div>
+
+    <div class="el vb nb" style="left:735px;bottom:175px;width:56px;--h:42px;background:var(--grey)" data-in="up+1.0" data-out="tie"></div>
+    <div class="el vb nb" style="left:799px;bottom:175px;width:56px;--h:65px;background:var(--purple)" data-in="up+1.4" data-out="tie"></div>
+    <div class="el lbl center" style="left:710px;top:560px;width:170px" data-in="up+1.0" data-out="tie">Refill pouch</div>
+
+    <div class="el vb nb" style="left:1015px;bottom:175px;width:56px;--h:42px;background:var(--grey)" data-in="up+1.5" data-out="tie"></div>
+    <div class="el vb nb" style="left:1079px;bottom:175px;width:56px;--h:91px;background:var(--purple)" data-in="up+1.9" data-out="tie"></div>
+    <div class="el lbl center" style="left:990px;top:560px;width:170px" data-in="up+1.5" data-out="tie">Canister</div>
+
+    <div class="el center red lbl" style="left:165px;top:150px;width:140px" data-in="up+1.0" data-out="tie">+38%</div>
+    <div class="el center red lbl" style="left:445px;top:210px;width:140px" data-in="up+1.4" data-out="tie">+50%</div>
+    <div class="el center red lbl" style="left:725px;top:360px;width:140px" data-in="up+1.8" data-out="tie">+54%</div>
+    <div class="el center red lbl pulse" style="left:1005px;top:330px;width:140px;font-size:36px" data-in="up+2.2" data-out="tie">+121%</div>
+
+    <!-- tie / swap -->
+    <div class="el card fl center" style="left:60px;top:110px;width:540px;height:320px" data-in="tie">
+      <div style="font-size:26px;font-weight:800">Per kg <span class="blue">filled</span></div>
+      <div style="display:flex;justify-content:space-around;margin-top:14px">
+        <div><div style="width:64px;height:130px;margin:0 auto;color:#fca5a5"><svg class="ic"><use href="#i-can2"/></svg></div><div class="lbl" style="margin-top:6px">Canister</div><div style="font-size:34px;font-weight:800">0.14</div></div>
+        <div style="align-self:center;font-size:50px;font-weight:900" class="amber">=</div>
+        <div><div style="width:64px;height:130px;margin:0 auto;color:#6ee7b7"><svg class="ic"><use href="#i-pouch"/></svg></div><div class="lbl" style="margin-top:6px">Pouch</div><div style="font-size:34px;font-weight:800">0.14</div></div>
+      </div>
+      <div class="pill" style="background:#3b3320;color:var(--amber);margin-top:14px">A TIE</div>
+    </div>
+    <div class="el card fr center" style="left:680px;top:110px;width:540px;height:320px;border-color:var(--red)" data-in="lost">
+      <div style="font-size:26px;font-weight:800">Per kg <span class="purple">used</span></div>
+      <div style="display:flex;justify-content:space-around;margin-top:14px">
+        <div class="el shake" style="position:relative" data-in="lost+0.3"><div style="width:64px;height:130px;margin:0 auto;color:var(--red)"><svg class="ic"><use href="#i-can2"/></svg></div><div class="lbl" style="margin-top:6px">Canister</div><div class="red" style="font-size:34px;font-weight:800">0.30</div></div>
+        <div style="align-self:center;font-size:50px;font-weight:900" class="red">&gt;</div>
+        <div><div style="width:64px;height:130px;margin:0 auto;color:#6ee7b7"><svg class="ic"><use href="#i-pouch"/></svg></div><div class="lbl" style="margin-top:6px">Pouch</div><div style="font-size:34px;font-weight:800">0.22</div></div>
+      </div>
+      <div class="pill" style="background:#4a1d2a;color:#fecdd3;margin-top:14px">Canister LOSES · 1.4×</div>
+    </div>
+    <div class="el card center" style="left:60px;top:470px;width:540px;height:110px;padding:16px" data-in="lost+3"><div style="font-size:24px"><b>Sachet</b> – the usual villain – is only <span class="amber">partly</span> worse than a pump bottle <span class="mute">(1.25× → 1.16×)</span></div></div>
+    <div class="el card center pop" style="left:680px;top:470px;width:540px;height:110px;padding:16px;border-color:var(--green)" data-in="pw"><div style="font-size:28px;font-weight:800" class="green">Refill pouches win either way</div><div class="mute" style="font-size:20px;margin-top:4px">≈ 0.3× the footprint of a pump bottle</div></div>
+  </div></section>
+
+  <!-- ================= SCENE 7: CONCLUSION ================= -->
+  <section class="scene" id="s7"><div class="inner">
+    <div class="el kick" data-in="0.3">Conclusions</div>
+    <div class="el center h1" style="left:240px;top:60px;width:800px;font-size:46px" data-in="0.5">Plastic replacement is <span class="amber">not</span> automatically greener</div>
+
+    <div class="el card fl center" style="left:60px;top:170px;width:360px;height:220px" data-in="c1">
+      <div style="font-size:50px">📦</div><div style="font-size:30px;font-weight:800;margin:4px 0" class="green">Material</div>
+      <div style="font-size:21px;line-height:1.3">Cartons reliably win · reuse helps · single-use glass &amp; aluminium usually lose</div></div>
+    <div class="el card center" style="left:460px;top:170px;width:360px;height:220px" data-in="c2">
+      <div style="font-size:50px">📍</div><div style="font-size:30px;font-weight:800;margin:4px 0" class="amber">Place</div>
+      <div style="font-size:21px;line-height:1.3">Indian collection rates change the answer, most of all for aluminium</div></div>
+    <div class="el card fr center" style="left:860px;top:170px;width:360px;height:220px" data-in="c3">
+      <div style="font-size:50px">🧴</div><div style="font-size:30px;font-weight:800;margin:4px 0" class="purple">Unit</div>
+      <div style="font-size:21px;line-height:1.3">Judge packs per unit of product actually used, with independent evidence</div></div>
+
+    <div class="el center h1" style="left:140px;top:420px;width:1000px;font-size:34px" data-in="q">Next time someone says “plastic-free”, ask:</div>
+    <div class="el center h1 amber" style="left:140px;top:475px;width:1000px;font-size:50px" data-in="q+1.5">Compared to what? Where? Who paid?</div>
+
+    <div class="el center" style="left:140px;top:555px;width:1000px;font-size:22px;color:var(--mute);line-height:1.4" data-in="thx"><b style="color:var(--ink);font-size:26px">UNWRAP</b> · Paridhi Mittal · Eshika Mishra · Keshav Goyal · Kunal Jain<br>CM617 · IIT Bombay</div>
+  </div></section>
+
+  <div id="subs"><span></span></div>
+  <div id="bar"></div>
+  <div id="count">3</div>
+</div>
+</div>
+
+<div id="ctl">
+  <button id="play">▶ Play</button>
+  <input id="seek" type="range" min="0" max="1000" value="0">
+  <span id="time">0:00 / 5:00</span>
+  <select id="rate" title="Playback speed">
+    <option value="0.8">0.8×</option><option value="0.9">0.9×</option><option value="1" selected>1×</option><option value="1.1">1.1×</option><option value="1.25">1.25×</option>
+  </select>
+  <span id="scenebtns"></span>
+  <button id="subbtn" class="on">Subtitles</button>
+  <button id="fs">Fullscreen</button>
+  <button id="rec">● Record mode</button>
+  <div id="hint">Space = play/pause · ← → = previous/next scene · S = subtitles · F = fullscreen · R = record mode (3-2-1 countdown, controls hidden, Esc to exit)</div>
+</div>
+</div>
+
+<script>
+/* ---------------- Script (voice-over = subtitles). [[name]] marks where a visual cue fires. ---------------- */
+const WPM = 122;              // assumed speaking pace used to size each scene
+const SCENES = [
+ {id:'s1', name:'Hook', vo:`Picture a [[bottles]]plastic bottle and a glass bottle. Which one is better for the planet? Almost everyone says [[glass]]glass. We checked [[n31]]thirty-one real comparisons from published studies. Replacements for plastic had a lower carbon footprint in only [[n13]]thirteen of them. So, is [[q]]“plastic-free” really greener?`},
+ {id:'s2', name:'Problem', vo:`Governments and brands are pushing to replace plastic with [[m1]]glass, [[m2]]aluminium, [[m3]]cartons and [[m4]]refills. The carbon case comes from life cycle assessments. But these studies have [[probs]]three problems. One: they [[p1]]disagree with each other. Two: they assume [[p2]]European waste systems, where most material is recycled, while in India a lot of waste is never collected. Three: they measure the pack per kilogram of product [[p3]]filled, not per kilogram actually used.`},
+ {id:'s3', name:'Approach', vo:`So we asked three questions. [[h1]]One: is replacement packaging actually lower in carbon than the plastic it replaces? [[h2]]Two: does that change under Indian collection rates? [[h3]]Three: does the answer change if we count the product left stuck in the pack? We built [[stages]]three stages to answer them: a meta-analysis, a recycling model, and an honest functional unit.`},
+ {id:'s4', name:'Stage 1', vo:`In stage one we screened [[f90]]ninety records and kept [[f24]]twenty-four reports. Instead of comparing averages across different studies, we only compared packs [[within]]inside the same study, where both used the same assumptions. That gave us [[f31]]thirty-one pairs from sixteen studies. The result: on average, the alternative had [[avg]]1.38 times the footprint of plastic. But it depends on the material. [[carton]]Cartons beat plastic in all nine pairs, at 0.63 times. [[reuse]]Reusable glass is close to a tie. [[glass]]Single-use glass is 2.6 times worse and [[alu]]aluminium is 2.5 times worse. Then a [[twist]]twist. When a study was paid for by a material maker, that material came out best in [[spons]]four of five studies. And values copied from an [[ind]]industry-compiled table looked twenty-six percent kinder to alternatives than the original papers.`},
+ {id:'s5', name:'Stage 2', vo:`Stage two moves to [[india]]India. We built a simulation of a beverage can, a PET bottle and a glass bottle, using Indian recycling rates: eighty-five percent for aluminium, seventy for PET. In [[eu]]Europe, an aluminium can has 1.73 times the footprint of PET. In [[inr]]India, that penalty shrinks to 1.16. Better, but still not a win. Aluminium only matches PET if about [[par]]eighty-nine percent of cans are collected, and India is at [[ind85]]eighty-five. So close, and yet not there. [[gl]]Glass stays about five times worse than PET at any collection rate.`},
+ {id:'s6', name:'Stage 3', vo:`Stage three is our favourite. Every packaging study we found counts a pack per kilogram of shampoo [[filled]]filled. But product that stays stuck inside the pack is [[waste]]wasted, and its carbon is wasted too. Using measured residue data from published studies, we scored four shampoo packs: a [[sachet]]sachet, a [[pump]]pump bottle, a [[pouch]]refill pouch and a [[can]]two-litre canister. When we charged each pack for the product it strands, [[up]]every footprint went up, by thirty-eight to one hundred twenty-one percent. The big canister, which [[tie]]tied with the refill pouch on the usual measure, [[lost]]lost by 1.4 times once leftovers were counted. And the sachet, usually the villain, turned out to be only partly worse than a pump bottle. [[pw]]Refill pouches won either way.`},
+ {id:'s7', name:'Conclusion', vo:`So what did we learn? Plastic replacement is not automatically greener. [[c1]]Cartons reliably win, reuse helps, and single-use glass and aluminium usually lose. In India, [[c2]]collection rates change the answer, especially for aluminium. And packaging should be judged [[c3]]per unit of product actually used, under local waste systems, with independent evidence. Next time someone says [[q]]“plastic-free,” ask: compared to what, where, and who paid for the study? [[thx]]Thank you.`}
+];
+
+/* ---------------- Timeline construction ---------------- */
+const LEAD = 0.5, TAIL = 0.4;
+let TOTAL = 0;
+SCENES.forEach(sc=>{
+  const re=/\[\[(\w+)\]\]/g; let m,last=0,plain='';sc.marks={};
+  while((m=re.exec(sc.vo))){plain+=sc.vo.slice(last,m.index);sc.marks[m[1]]=plain.length;last=re.lastIndex}
+  plain+=sc.vo.slice(last); sc.plain=plain.replace(/\s+/g,' ').trim();
+  sc.words=sc.plain.split(' ').length;
+  sc.dur=sc.words/WPM*60+LEAD+TAIL;
+  sc.start=TOTAL; TOTAL+=sc.dur; sc.end=TOTAL;
+  sc.el=document.getElementById(sc.id);
+  // cue times (absolute seconds, scene-local resolved later)
+  sc.cue={start:0};
+  const L=sc.plain.length, span=sc.dur-LEAD-TAIL;
+  for(const k in sc.marks){ sc.cue[k]=Math.max(0.2,LEAD+(sc.marks[k]/L)*span-0.15); }
+  // subtitle chunks
+  let sents=sc.plain.match(/[^.?!:]+[.?!:]+["”]?\s*|[^.?!:]+$/g)||[sc.plain];
+  let chunks=[];
+  sents.forEach(s=>{s=s.trim(); while(s.length>78){let cut=s.lastIndexOf(',',78); if(cut<30)cut=s.lastIndexOf(' ',78); chunks.push(s.slice(0,cut+1).trim()); s=s.slice(cut+1).trim()} if(s)chunks.push(s)});
+  let pos=0; sc.subs=chunks.map(c=>{const a=LEAD+(pos/L)*span; pos+=c.length+1; const b=LEAD+(Math.min(pos,L)/L)*span; return {a,b,t:c}});
+});
+
+/* ---------------- Build dots for scene 1 ---------------- */
+(function(){
+  const host=document.getElementById('dots1'); const sc=SCENES[0].el.querySelector('.inner');
+  const cols=[8,8,8,7]; let n=0;
+  cols.forEach((c,r)=>{ for(let i=0;i<c;i++){
+    const d=document.createElement('div'); d.className='el pop dot '+(n<13?'w':'l');
+    const x=640-(c*64)/2+i*64+9, y=150+r*62;
+    d.style.left=x+'px'; d.style.top=y+'px';
+    d.dataset.in='n31+'+(0.1+n*0.07).toFixed(2); d.dataset.alt='n13+'+(n*0.08).toFixed(2); n++;
+    sc.appendChild(d);
+  }});
+})();
+
+/* ---------------- Resolve element timings ---------------- */
+function parseT(sc,expr){
+  if(expr==null||expr==='')return null;
+  let m=expr.match(/^([a-z][\w]*)(?:([+-])([\d.]+))?$/i);
+  if(m){ const base=sc.cue[m[1]]; if(base==null){console.warn('unknown cue',expr,sc.id);return 0} return base+(m[2]==='-'?-1:1)*(m[3]?parseFloat(m[3]):0) }
+  return parseFloat(expr);
+}
+SCENES.forEach(sc=>{
+  sc.els=[...sc.el.querySelectorAll('[data-in],[data-count-cue],[data-alt]')].map(el=>({
+    el, tin:parseT(sc,el.dataset.in), tout:parseT(sc,el.dataset.out), talt:parseT(sc,el.dataset.alt),
+    ccue:el.dataset.countCue?parseT(sc,el.dataset.countCue):null,
+    cto:parseFloat(el.dataset.countTo||0), cdur:parseFloat(el.dataset.countDur||1), cdec:parseInt(el.dataset.countDec||0),
+    cv:el.querySelector('.cv')
+  }));
+});
+
+/* ---------------- Rendering ---------------- */
+const $=id=>document.getElementById(id);
+const subs=$('subs'), subSpan=subs.querySelector('span');
+function fmt(t){t=Math.max(0,t);return Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0')}
+function render(t){
+  t=Math.min(Math.max(t,0),TOTAL-0.001);
+  let idx=SCENES.findIndex(s=>t>=s.start&&t<s.end); if(idx<0)idx=SCENES.length-1;
+  SCENES.forEach((s,i)=>s.el.classList.toggle('active',i===idx));
+  const sc=SCENES[idx], lt=t-sc.start;
+  sc.els.forEach(o=>{
+    let on = o.tin==null? true : lt>=o.tin;
+    if(on && o.tout!=null && lt>=o.tout) on=false;
+    if(o.el.dataset.in!==undefined) o.el.classList.toggle('in',on);
+    if(o.talt!=null) o.el.classList.toggle('alt',lt>=o.talt);
+    if(o.cv&&o.ccue!=null){ const p=Math.min(1,Math.max(0,(lt-o.ccue)/o.cdur)); const e=1-Math.pow(1-p,3); o.cv.textContent=(o.cto*e).toFixed(o.cdec) }
+  });
+  const sub=sc.subs.find(s=>lt>=s.a&&lt<s.b+0.25);
+  subSpan.textContent=sub?sub.t:''; subSpan.style.display=sub?'inline-block':'none';
+  $('bar').style.width=(t/TOTAL*100)+'%';
+  $('time').textContent=fmt(t)+' / '+fmt(TOTAL);
+  $('seek').value=Math.round(t/TOTAL*1000);
+  document.querySelectorAll('#scenebtns button').forEach((b,i)=>b.classList.toggle('on',i===idx));
+}
+
+/* ---------------- Clock ---------------- */
+let clock=0, playing=false, last=0, rate=1;
+function tick(now){ if(playing){ clock+=(now-last)/1000*rate; last=now; if(clock>=TOTAL){clock=TOTAL-0.001;setPlaying(false)} render(clock) } requestAnimationFrame(tick) }
+function setPlaying(p){ playing=p; last=performance.now(); $('play').textContent=p?'❚❚ Pause':'▶ Play' }
+function seek(t){ clock=Math.min(Math.max(t,0),TOTAL-0.001); render(clock) }
+$('play').onclick=()=>{ if(clock>=TOTAL-0.01)seek(0); setPlaying(!playing) };
+$('seek').oninput=e=>seek(e.target.value/1000*TOTAL);
+$('rate').onchange=e=>rate=parseFloat(e.target.value);
+SCENES.forEach((s,i)=>{ const b=document.createElement('button'); b.textContent=(i+1); b.title=s.name; b.onclick=()=>seek(s.start+0.01); $('scenebtns').appendChild(b) });
+$('subbtn').onclick=()=>{ subs.classList.toggle('off'); $('subbtn').classList.toggle('on') };
+$('fs').onclick=()=>{ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen() };
+
+function curScene(){ return SCENES.findIndex(s=>clock>=s.start&&clock<s.end) }
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT')return;
+  if(e.code==='Space'){e.preventDefault();$('play').click()}
+  else if(e.key==='ArrowRight'){const i=curScene();seek(SCENES[Math.min(i+1,SCENES.length-1)].start+0.01)}
+  else if(e.key==='ArrowLeft'){const i=curScene();seek(SCENES[(clock-SCENES[i].start>2)?i:Math.max(0,i-1)].start+0.01)}
+  else if(e.key==='s'||e.key==='S')$('subbtn').click();
+  else if(e.key==='f'||e.key==='F')$('fs').click();
+  else if(e.key==='r'||e.key==='R')startRecord();
+  else if(e.key==='Escape')endRecord();
+});
+
+/* ---------------- Record mode ---------------- */
+let cdTimer=null;
+function startRecord(){
+  setPlaying(false); seek(0); document.body.classList.add('rec'); fit();
+  const c=$('count'); c.style.display='flex'; let n=3; c.textContent=n;
+  clearInterval(cdTimer);
+  cdTimer=setInterval(()=>{ n--; if(n>0){c.textContent=n} else { clearInterval(cdTimer); c.style.display='none'; setPlaying(true) } },1000);
+}
+function endRecord(){ clearInterval(cdTimer); $('count').style.display='none'; document.body.classList.remove('rec'); setPlaying(false); fit() }
+$('rec').onclick=startRecord;
+
+/* ---------------- Fit stage to window ---------------- */
+function fit(){
+  const v=$('viewport'), w=v.clientWidth, h=v.clientHeight, s=Math.min(w/1280,h/720);
+  const st=$('stage'); st.style.transform=`scale(${s})`; st.style.left=((w-1280*s)/2)+'px'; st.style.top=((h-720*s)/2)+'px';
+}
+window.addEventListener('resize',fit); fit();
+
+render(0); requestAnimationFrame(t=>{last=t;tick(t)});
+document.title='UNWRAP Video ('+fmt(TOTAL)+')';
+console.table(SCENES.map(s=>({scene:s.name,words:s.words,seconds:s.dur.toFixed(1),start:fmt(s.start)})));
+</script>
+</body>
+</html>
